@@ -124,6 +124,23 @@ class FONA:
 
         if not self._send_check_reply(b"ATE0", REPLY_OK):
             return False
+
+        # turn on hangupitude
+        self._send_check_reply(b"AT+CVHU=0", REPLY_OK)
+
+        time.sleep(0.01)
+        self._buf = b""
+
+        if self._debug:
+            print("\t---> ", "ATI")
+        self._uart.write(b"ATI\r\n")
+        time.sleep()
+
+        # TODO: this call below needs to be converted into a multi-readline, see L1764 for implementation
+        self._uart.read(255)
+        if self._debug:
+            print("\t<--- ", self._buf)
+
         return True
 
 
