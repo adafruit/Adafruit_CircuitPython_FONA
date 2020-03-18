@@ -26,3 +26,5 @@ print("Module IEMI: ", fona.IEMI)
 
 # Configure GRPS
 fona.GPRS = (secrets["apn"], secrets["apn_username"], secrets["apn_password"])
+
+print("RSSI: {}dBm".format(fona.RSSI))

@@ -47,6 +47,7 @@ Implementation Notes
 import time
 from micropython import const
 import busio
+from simpleio import map_range
 
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_FONA.git"
@@ -121,7 +122,7 @@ class FONA:
     @property
     def IEMI(self):
         """Returns FONA module's IEMI number."""
-        #self._send_check_reply(b"AT+GSN\r\n", REPLY_OK)
+        #self.send_check_reply(b"AT+GSN\r\n", REPLY_OK)
         self._buf = b""
         self._uart.reset_input_buffer()
 
@@ -132,11 +133,9 @@ class FONA:
         iemi = self._buf[0:15]
         return iemi.decode("utf-8")
 
-
     @property
     def GPRS(self):
-        """Returns module's GPRS configuration, as a tuple.
-        """
+        """Returns module's GPRS configuration, as a tuple."""
         return (self._apn, self._apn_username, self._apn_password)
     
     @GPRS.setter
@@ -148,6 +147,51 @@ class FONA:
         self._apn = apn
         self._apn_username = username
         self._apn_password = password
+
+    @property
+    def RSSI(self):
+        """Returns cellular network's Received Signal Strength Indicator."""
+        self.get_reply(b"AT+CSQ")
+        reply_num = self.parse_reply(self._buf)
+
+        rssi = 0
+        if reply_num == 0:
+            rssi = -115
+        elif reply_num == 1:
+            rssi = -111
+        elif reply_num == 31:
+            rssi = -52
+        
+        if reply_num >= 2 and reply_num <= 30:
+            rssi = map_range(reply_num, 2, 30, -110, -54)
+        return rssi
+
+    def parse_reply(self, reply, divider=","):
+        if hasattr(reply, "decode"):
+            reply = reply.decode("utf-8")
+        idx = reply.find(divider)
+        return int(reply[idx-3:idx])
+
+    def get_reply(self, data, timeout=FONA_DEFAULT_TIMEOUT_MS):
+        """Send data to FONA, read response into buffer.
+        :param bytes data: Data to send to FONA module.
+        :param int timeout: Time to wait for UART response.
+
+        """
+        self._uart.reset_input_buffer()
+        if self._debug:
+            print("\t---> ", data)
+
+        self._uart.timeout = FONA_DEFAULT_TIMEOUT_MS/1000
+        result = self._uart.write(data+"\r\n")
+
+        self._buf = b""
+        line = self.read_line(multiline=True)
+
+        if self._debug:
+            print("\t<--- ", self._buf)
+        return line
+
 
     def _init_fona(self):
         """Initializes FONA module."""
@@ -163,9 +207,9 @@ class FONA:
             print("Attempting to open comm with ATs")
         timeout = 7
         while timeout > 0:
-            if self._send_check_reply(CMD_AT, REPLY_OK):
+            if self.send_check_reply(CMD_AT, REPLY_OK):
                 break
-            if self._send_check_reply(CMD_AT, REPLY_AT):
+            if self.send_check_reply(CMD_AT, REPLY_AT):
                 break
             time.sleep(0.5)
             timeout -= 500
@@ -173,22 +217,22 @@ class FONA:
         if timeout <= 0:
             if self._debug:
                 print(" * Timeout: No response to AT. Last ditch attempt.")
-            self._send_check_reply(CMD_AT, REPLY_OK)
+            self.send_check_reply(CMD_AT, REPLY_OK)
             time.sleep(0.01)
-            self._send_check_reply(CMD_AT, REPLY_OK)
+            self.send_check_reply(CMD_AT, REPLY_OK)
             time.sleep(0.01)
-            self._send_check_reply(CMD_AT, REPLY_OK)
+            self.send_check_reply(CMD_AT, REPLY_OK)
             time.sleep(0.01)
 
         # turn off echo
-        self._send_check_reply(b"ATE0", REPLY_OK)
+        self.send_check_reply(b"ATE0", REPLY_OK)
         time.sleep(0.01)
 
-        if not self._send_check_reply(b"ATE0", REPLY_OK):
+        if not self.send_check_reply(b"ATE0", REPLY_OK):
             return False
 
         # turn on hangupitude
-        self._send_check_reply(b"AT+CVHU=0", REPLY_OK)
+        self.send_check_reply(b"AT+CVHU=0", REPLY_OK)
 
         time.sleep(0.01)
         self._buf = b""
@@ -258,7 +302,7 @@ class FONA:
         return reply_idx
 
 
-    def _send_check_reply(self, send, reply, timeout=FONA_DEFAULT_TIMEOUT_MS):
+    def send_check_reply(self, send, reply, timeout=FONA_DEFAULT_TIMEOUT_MS):
         """Send command to the FONA and check its reply.
         :param bytes send: Data to send to the FONA.
         :param str reply: Expected reply from the FONA.
