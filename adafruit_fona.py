@@ -119,23 +119,16 @@ class FONA:
     @property
     def IEMI(self):
         """Returns FONA module's IEMI number."""
-        self.get_reply(b"AT+GSN\n\n")
-        print("IEMI: ", self._buf)
-        pass
-
-    def get_reply(self, data, timeout=FONA_DEFAULT_TIMEOUT_MS):
-        """Sends data to FONA module."""
+        #self._send_check_reply(b"AT+GSN\r\n", REPLY_OK)
+        self._buf = b""
         self._uart.reset_input_buffer()
-        self._buf = data
-        print(self._buf)
-        if self._debug:
-            print("\t---> ", data)
-        self._uart.write(self._buf)
 
-        line = self.read_line(timeout=timeout)
         if self._debug:
-            print("\t<--- ", self._buf)
-        return line
+            print("\t---> ", "AT+GSN")
+        self._uart.write(b"AT+GSN\r\n")
+        self.read_line(multiline=True)
+        iemi = self._buf[0:15]
+        return iemi.decode("utf-8")
 
     def _init_fona(self):
         """Initializes FONA module."""
@@ -219,11 +212,8 @@ class FONA:
         """
         reply_idx = 0
 
-        print("read_line called, bytes in buf:", self._uart.in_waiting)
-
         while timeout:
             if reply_idx >= 254:
-                print("SPACE")
                 break
 
             while self._uart.in_waiting:

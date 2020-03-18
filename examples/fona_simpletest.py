@@ -13,4 +13,6 @@ fona = adafruit_fona.FONA(board.TX, board.RX, rst)
 
 print("FONA OK\nFound: ", fona.version)
 
-print("IEMI: ", fona.IEMI)
+print("Module IEMI: ", fona.IEMI)
+
+# Configure GRPS APN, Username, and PAssword
