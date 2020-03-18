@@ -52,7 +52,7 @@ __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_FONA.git"
 
 FONA_BAUD = const(4800)
-FONA_DEFAULT_TIMEOUT_MS = const(500)
+FONA_DEFAULT_TIMEOUT_MS = 500
 
 # COMMANDS
 CMD_AT = b"AT"
@@ -60,6 +60,17 @@ CMD_AT = b"AT"
 # REPLIES
 REPLY_OK = b"OK"
 REPLY_AT = b"AT"
+
+# FONA Versions
+FONA_800_L = const(0x01)
+FONA_800_H = const(0x6)
+
+FONA_808_V1 = const(0x2)
+FONA_808_V2 = const(0x3)
+
+FONA_3G_A   = const(0x4)
+FONA_3G_E   = const(0x5)
+
 
 class FONA:
     """CircuitPython FONA module interface.
@@ -71,12 +82,13 @@ class FONA:
     """
     def __init__(self, tx, rx, rst, debug=True):
         self._buf = b""
+        self._fona_type = 0
         self._debug = debug
         # Set up UART interface
         self._uart = busio.UART(tx, rx, baudrate=FONA_BAUD)
         self._rst = rst
         if not self._init_fona():
-            raise RuntimeError("Unable to find FONA. Please check your connections.")
+            raise RuntimeError("Unable to find FONA. Please check connections.")
         self._init_fona()
 
         self._apn = "FONAnet"
@@ -86,9 +98,26 @@ class FONA:
         self._user_agent = "FONA"
         self._ok_reply = "OK"
 
+    @property
+    def version(self):
+        """Returns FONA Version,as a string."""
+        if self._fona_type == FONA_800_L:
+            return "FONA 800L"
+        elif self._fona_type == FONA_800_H:
+            return "FONA 800H"
+        elif self._fona_type == FONA_808_V1:
+            return "FONA 808 (v1)"
+        elif self._fona_type == FONA_808_V2:
+            return "FONA 808 (v2)"
+        elif self._fona_type == FONA_3G_A:
+            return "FONA 3G (US)"
+        elif self._fona_type == FONA_3G_E:
+            return "FONA 3G (EU)"
+        else:
+            return -1
+
     def _init_fona(self):
-        """Initialize FONA module.
-        """
+        """Initializes FONA module."""
         # RST module
         self._rst.switch_to_output()
         self._rst.value = True
@@ -130,18 +159,73 @@ class FONA:
 
         time.sleep(0.01)
         self._buf = b""
+        self._uart.reset_input_buffer()
 
         if self._debug:
             print("\t---> ", "ATI")
         self._uart.write(b"ATI\r\n")
-        time.sleep()
+        self.read_line(multiline=True)
 
-        # TODO: this call below needs to be converted into a multi-readline, see L1764 for implementation
-        self._uart.read(255)
-        if self._debug:
-            print("\t<--- ", self._buf)
+        if self._buf.find(b"SIM808 R14") != -1:
+            self._fona_type = FONA_808_V2
+        elif self._buf.find(b"SIM808 R13") != -1:
+            self._fona_type = FONA_808_V1
+        elif self._buf.find(b"SIMCOM_SIM5320A") != -1:
+            self._fona_type = FONA_3G_A
+        elif self._buf.find(b"SIMCOM_SIM5320E") != -1:
+            self._fona_type = FONA_3G_E
+
+        if self._fona_type == FONA_800_L:
+            # determine if _H
+            if self._debug:
+                print("\t ---> AT+GMM")
+            self._uart.write(b"AT+GMM\r\n")
+            self.read_line(multiline=True)
+            if self._debug:
+                print("\t <---", self._buf)
+            
+            if self._buf.find(b"SIM800H") != -1:
+                self._fona_type = FONA_800_H
 
         return True
+
+
+    def read_line(self, timeout=FONA_DEFAULT_TIMEOUT_MS, multiline=False):
+        """Reads one or multiple lines into the buffer.
+        :param int timeout: Time to wait for UART serial to reply, in seconds.
+        :param bool multiline: Read multiple lines.
+
+        """
+        reply_idx = 0
+
+        print("read_line called!", self._uart.in_waiting)
+
+        while timeout:
+            if reply_idx >= 254:
+                print("SPACE")
+                break
+
+            while self._uart.in_waiting:
+                c = self._uart.read(1)
+                #print(c)
+                if c == b'\r':
+                    continue
+                if c == b'\n':
+                    if reply_idx == 0:
+                        # ignore first '\n'
+                        continue
+                    if not multiline:
+                        # second '\n' is EOL
+                        timeout = 0
+                        break
+                self._buf += c
+                reply_idx += 1
+            timeout -= 1
+            time.sleep(0.001)
+
+        # append null
+        self._buf += b"0x00"
+        return reply_idx
 
 
     def _send_check_reply(self, send, reply, timeout=FONA_DEFAULT_TIMEOUT_MS):
@@ -149,6 +233,7 @@ class FONA:
         :param bytes send: Data to send to the FONA.
         :param str reply: Expected reply from the FONA.
         :param int timeout: Time to expect data back from FONA, in seconds.
+
         """
         # flush the buffer
         self._buf = b""
