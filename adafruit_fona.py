@@ -116,6 +116,27 @@ class FONA:
         else:
             return -1
 
+    @property
+    def IEMI(self):
+        """Returns FONA module's IEMI number."""
+        self.get_reply(b"AT+GSN\n\n")
+        print("IEMI: ", self._buf)
+        pass
+
+    def get_reply(self, data, timeout=FONA_DEFAULT_TIMEOUT_MS):
+        """Sends data to FONA module."""
+        self._uart.reset_input_buffer()
+        self._buf = data
+        print(self._buf)
+        if self._debug:
+            print("\t---> ", data)
+        self._uart.write(self._buf)
+
+        line = self.read_line(timeout=timeout)
+        if self._debug:
+            print("\t<--- ", self._buf)
+        return line
+
     def _init_fona(self):
         """Initializes FONA module."""
         # RST module
@@ -198,7 +219,7 @@ class FONA:
         """
         reply_idx = 0
 
-        print("read_line called!", self._uart.in_waiting)
+        print("read_line called, bytes in buf:", self._uart.in_waiting)
 
         while timeout:
             if reply_idx >= 254:
