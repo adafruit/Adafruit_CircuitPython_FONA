@@ -77,10 +77,12 @@ class FONA:
     :param ~digialio TX: FONA TX Pin
     :param ~digialio RX: FONA RX Pin
     :param ~digialio RST: FONA RST Pin
+    :param bool set_https_redir: Optionally configure HTTP gets to follow
+                                    redirects over SSL.
     :param bool debug: Enable debugging output.
 
     """
-    def __init__(self, tx, rx, rst, debug=True):
+    def __init__(self, tx, rx, rst, set_https_redir=False, debug=False):
         self._buf = b""
         self._fona_type = 0
         self._debug = debug
@@ -94,7 +96,7 @@ class FONA:
         self._apn = "FONAnet"
         self._apn_username = 0
         self._apn_password = 0
-        self._https_redirect = False
+        self._https_redirect = set_https_redir
         self._user_agent = "FONA"
         self._ok_reply = "OK"
 
@@ -129,6 +131,23 @@ class FONA:
         self.read_line(multiline=True)
         iemi = self._buf[0:15]
         return iemi.decode("utf-8")
+
+
+    @property
+    def GPRS(self):
+        """Returns module's GPRS configuration, as a tuple.
+        """
+        return (self._apn, self._apn_username, self._apn_password)
+    
+    @GPRS.setter
+    def GPRS(self, config):
+        """Sets GPRS configuration to provided tuple in format:
+        (apn_network, apn_username, apn_password)
+        """
+        apn, username, password = config
+        self._apn = apn
+        self._apn_username = username
+        self._apn_password = password
 
     def _init_fona(self):
         """Initializes FONA module."""
