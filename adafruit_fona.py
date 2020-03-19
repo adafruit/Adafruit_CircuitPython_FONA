@@ -94,7 +94,6 @@ class FONA:
             raise RuntimeError("Unable to find FONA. Please check connections.")
         self._init_fona()
 
-        self._gps_enabled = False
         self._apn = "FONAnet"
         self._apn_username = 0
         self._apn_password = 0
@@ -190,12 +189,50 @@ class FONA:
         self._buf = b""
         self.read_line()
         return rssi
-    
+
     @property
     def GPS(self):
         """Returns if the GPS is disabled or enabled."""
-        return self._gps_enabled
+        stat = self._gps_status()
+        if stat < 0:
+            print("Failed to query module")
+        elif stat == 0:
+            print("GPS off")
+        elif stat == 1:
+            print("No fix")
+        elif stat == 2:
+            print("2D fix")
+        elif stat == 3:
+            print("3D fix")
+        self.read_line()
+        return stat
 
+    def _gps_status(self):
+        """Returns GPS status or fix."""
+        print("GPS STATUS")
+        if self._fona_type == FONA_808_V2:
+            # 808 V2 uses GNS commands and doesn't have an explicit 2D/3D fix status.
+            # Instead just look for a fix and if found assume it's a 3D fix.
+            self.get_reply(b"AT+CGNSINF")
+            p = self._buf.find(b"+CGNSINF: ")
+            if p == -1:
+                return False
+            
+            p += 10
+            if chr(self._buf[p]) == 0:
+                # GPS is OFF!
+                return False
+            # skip to fix status
+            p += 2
+            if chr(self._buf[p]) == 1:
+                return 3
+            else:
+                return 1
+        # TODO: implement other fona versions: 3g, 808v1
+        else:
+            return 0
+
+    @GPS.setter
     def GPS(self, gps_on=False):
         """Enables or disables the GPS module.
         NOTE: This is only for FONA 3G or FONA808 modules.
@@ -215,7 +252,7 @@ class FONA:
                 self.read_line()
                 if not self.send_parse_reply(b"AT+CGPSPWR?", b"+CGPSPWR: "):
                     return False
-        
+
         if gps_on:
             if self._fona_type == FONA_808_V2:
                 # try GNS
