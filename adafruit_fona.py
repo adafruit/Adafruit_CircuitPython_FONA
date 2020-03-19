@@ -139,14 +139,21 @@ class FONA:
         return (self._apn, self._apn_username, self._apn_password)
     
     @GPRS.setter
-    def GPRS(self, config):
-        """Sets GPRS configuration to provided tuple in format:
+    def GPRS(self, gprs_on, config):
+        """Enables or disables GPRS configuration.
+        If config provided, sets GPRS configuration to provided tuple in format:
         (apn_network, apn_username, apn_password)
+        :param bool gprs_on: Turns on GPRS.
+        :param 
         """
-        apn, username, password = config
-        self._apn = apn
-        self._apn_username = username
-        self._apn_password = password
+        if config:
+            apn, username, password = config
+            self._apn = apn
+            self._apn_username = username
+            self._apn_password = password
+        # TODO: add enableGPRS method
+        return True
+
 
     @property
     def network_status(self):
