@@ -22,9 +22,20 @@ fona = adafruit_fona.FONA(board.TX, board.RX, rst, debug=True)
 
 print("FONA OK\nFound: ", fona.version)
 
-print("Module IEMI: ", fona.IEMI)
+#print("Module IEMI: ", fona.IEMI)
 
 # Configure GRPS
-fona.GPRS = (secrets["apn"], secrets["apn_username"], secrets["apn_password"])
+#fona.GPRS = (secrets["apn"], secrets["apn_username"], secrets["apn_password"])
 
-print("RSSI: {}dBm".format(fona.RSSI))
+#print("RSSI: {}dBm".format(fona.RSSI))
+
+#fona.network_status
+
+print("checking status:")
+status = fona.GPS
+
+print("turning on...")
+fona.GPS = True
+
+print("checking status:")
+status = fona.GPS
