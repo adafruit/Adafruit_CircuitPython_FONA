@@ -149,11 +149,20 @@ class FONA:
         self._apn_password = password
 
     @property
+    def network_status(self):
+        """Returns cellular/network status"""
+        self.get_reply(b"AT+CREG?")
+
+        reply_num = self.parse_reply(self._buf)
+        pass
+
+    @property
     def RSSI(self):
         """Returns cellular network's Received Signal Strength Indicator."""
-        self.get_reply(b"AT+CSQ")
-        reply_num = self.parse_reply(self._buf)
+        if not self.send_parse_reply(b"AT+CSQ", b"+CSQ: "):
+            return False
 
+        reply_num = int(self._buf)
         rssi = 0
         if reply_num == 0:
             rssi = -115
@@ -166,11 +175,41 @@ class FONA:
             rssi = map_range(reply_num, 2, 30, -110, -54)
         return rssi
 
+    def send_parse_reply(self, send_data, reply_data, divider=','):
+        """Sends data to FONA module, parses reply data returned.
+        :param bytes send_data: Data to send to the module.
+        :param bytes send_data: Data received by the FONA module.
+        :param str divider: Separator
+
+        """
+        self.get_reply(send_data)
+
+        if not self.parse_reply(reply_data, divider):
+            return False
+
+        self._uart.reset_input_buffer()
+
+        return True
+
     def parse_reply(self, reply, divider=","):
-        if hasattr(reply, "decode"):
-            reply = reply.decode("utf-8")
-        idx = reply.find(divider)
-        return int(reply[idx-3:idx])
+        """Attempts to find reply in UART buffer, reads up to divider.
+        :param bytes reply: Expected response from FONA module.
+        :param str divider: Divider character.
+
+        """
+        # attempt to find reply in buffer
+        if self._buf.find(reply) == -1:
+            return False
+
+        p_buff =  self._buf[len(reply):]
+
+        self._buf = b""
+        for i in range(len(p_buff)):
+            if chr(p_buff[i]) == divider:
+                break
+            self._buf += chr(p_buff[i])
+
+        return True
 
     def get_reply(self, data, timeout=FONA_DEFAULT_TIMEOUT_MS):
         """Send data to FONA, read response into buffer.
@@ -182,16 +221,14 @@ class FONA:
         if self._debug:
             print("\t---> ", data)
 
-        self._uart.timeout = FONA_DEFAULT_TIMEOUT_MS/1000
         result = self._uart.write(data+"\r\n")
 
         self._buf = b""
-        line = self.read_line(multiline=True)
+        line = self.read_line(multiline=False)
 
         if self._debug:
             print("\t<--- ", self._buf)
         return line
-
 
     def _init_fona(self):
         """Initializes FONA module."""
@@ -281,7 +318,6 @@ class FONA:
 
             while self._uart.in_waiting:
                 c = self._uart.read(1)
-                #print(c)
                 if c == b'\r':
                     continue
                 if c == b'\n':
@@ -294,13 +330,13 @@ class FONA:
                         break
                 self._buf += c
                 reply_idx += 1
+
+            if timeout == 0:
+                break
             timeout -= 1
             time.sleep(0.001)
 
-        # append null
-        self._buf += b"0x00"
         return reply_idx
-
 
     def send_check_reply(self, send, reply, timeout=FONA_DEFAULT_TIMEOUT_MS):
         """Send command to the FONA and check its reply.
