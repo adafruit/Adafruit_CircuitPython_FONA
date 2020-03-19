@@ -94,6 +94,7 @@ class FONA:
             raise RuntimeError("Unable to find FONA. Please check connections.")
         self._init_fona()
 
+        self._gps_enabled = False
         self._apn = "FONAnet"
         self._apn_username = 0
         self._apn_password = 0
@@ -190,21 +191,49 @@ class FONA:
         self.read_line()
         return rssi
     
-    # TODO!
     @property
     def GPS(self):
-        pass
+        """Returns if the GPS is disabled or enabled."""
+        return self._gps_enabled
 
-    # TODO!
     def GPS(self, gps_on=False):
-        """Enables or disables the GPS module. 
+        """Enables or disables the GPS module.
         NOTE: This is only for FONA 3G or FONA808 modules.
         :param bool gps_on: Enables the GPS module, disabled by default.
 
         """
-        if not self._fona_type == 4 or self._fona_type == 5 or self._fona_type == 2 or self._fona_type == 3:
-            raise TypeError("GPS unsupported for this FONA module.")
-        pass
+        if not (self._fona_type == FONA_3G_A or self._fona_type == FONA_3G_E or
+                    self._fona_type == FONA_808_V1 or self._fona_type == FONA_808_V2):
+                        raise TypeError("GPS unsupported for this FONA module.")
+
+        # check if already enabled or disabled
+        if self._fona_type == FONA_808_V2:
+            if not self.send_parse_reply(b"AT+CGNSPWR?", b"+CGNSPWR: "):
+                return False
+            else:
+                self._buf = b""
+                self.read_line()
+                if not self.send_parse_reply(b"AT+CGPSPWR?", b"+CGPSPWR: "):
+                    return False
+        
+        if gps_on:
+            if self._fona_type == FONA_808_V2:
+                # try GNS
+                if not self.send_check_reply(b"AT+CGNSPWR=1", REPLY_OK):
+                    return False
+            else:
+                if not self.send_parse_reply(b"AT+CGPSPWR=1", REPLY_OK):
+                    return False
+        else:
+            if self._fona_type == FONA_808_V2:
+                # try GNS
+                if not self.send_check_reply(b"AT+CGNSPWR=0", REPLY_OK):
+                    return False
+                else:
+                    if not self.send_check_reply(b"AT+CGPSPWR=0", REPLY_OK):
+                        return False
+
+        return True
 
     def send_parse_reply(self, send_data, reply_data, divider=',', idx=0):
         """Sends data to FONA module, parses reply data returned.
@@ -231,7 +260,6 @@ class FONA:
         if p == -1:
             return False
         p = self._buf[p:]
-        print(p)
 
         p = self._buf[len(reply):]
         p = p.decode("utf-8")
@@ -343,14 +371,13 @@ class FONA:
 
         """
         reply_idx = 0
-
         while timeout:
             if reply_idx >= 254:
                 break
 
             while self._uart.in_waiting:
                 c = self._uart.read(1)
-                #print(c)
+                # print(c)
                 if c == b'\r':
                     continue
                 if c == b'\n':
@@ -361,7 +388,7 @@ class FONA:
                         # second '\n' is EOL
                         timeout = 0
                         break
-                #print(c, self._buf)
+                # print(c, self._buf)
                 self._buf += c
                 reply_idx += 1
 
