@@ -34,8 +34,8 @@ Implementation Notes
 
 **Hardware:**
 
-.. todo:: Add links to any specific hardware product page(s), or category page(s). Use unordered list & hyperlink rST
-   inline format: "* `Link Text <url>`_"
+* `Adafruit FONA 808 Breakout <https://www.adafruit.com/product/2542>`_
+* `Adafruit FONA 808 Shield <https://www.adafruit.com/product/2636>`_
 
 **Software and Dependencies:**
 
@@ -151,18 +151,29 @@ class FONA:
     @property
     def network_status(self):
         """Returns cellular/network status"""
-        self.get_reply(b"AT+CREG?")
-
-        reply_num = self.parse_reply(self._buf)
-        pass
+        if not self.send_parse_reply(b"AT+CREG?", b"+CREG: ", idx=1):
+            return False
+        if self._buf == 0:
+            print("Not Registered!")
+        elif self._buf == 1:
+            print("Registered (home)")
+        elif self._buf == 2:
+            print("Not Registered (searching)")
+        elif self._buf == 3:
+            print("Denied")
+        elif self._buf == 4:
+            print("Unknown")
+        elif self._buf == 5:
+            print("Registered Roaming")
+        return self._buf
 
     @property
     def RSSI(self):
-        """Returns cellular network's Received Signal Strength Indicator."""
+        """Returns cellular network's Received Signal Strength Indicator (RSSI)."""
         if not self.send_parse_reply(b"AT+CSQ", b"+CSQ: "):
             return False
 
-        reply_num = int(self._buf)
+        reply_num = self._buf
         rssi = 0
         if reply_num == 0:
             rssi = -115
@@ -173,9 +184,29 @@ class FONA:
         
         if reply_num >= 2 and reply_num <= 30:
             rssi = map_range(reply_num, 2, 30, -110, -54)
-        return rssi
 
-    def send_parse_reply(self, send_data, reply_data, divider=','):
+        # read out the 'ok'
+        self._buf = b""
+        self.read_line()
+        return rssi
+    
+    # TODO!
+    @property
+    def GPS(self):
+        pass
+
+    # TODO!
+    def GPS(self, gps_on=False):
+        """Enables or disables the GPS module. 
+        NOTE: This is only for FONA 3G or FONA808 modules.
+        :param bool gps_on: Enables the GPS module, disabled by default.
+
+        """
+        if not self._fona_type == 4 or self._fona_type == 5 or self._fona_type == 2 or self._fona_type == 3:
+            raise TypeError("GPS unsupported for this FONA module.")
+        pass
+
+    def send_parse_reply(self, send_data, reply_data, divider=',', idx=0):
         """Sends data to FONA module, parses reply data returned.
         :param bytes send_data: Data to send to the module.
         :param bytes send_data: Data received by the FONA module.
@@ -184,30 +215,31 @@ class FONA:
         """
         self.get_reply(send_data)
 
-        if not self.parse_reply(reply_data, divider):
+        if not self.parse_reply(reply_data, divider, idx):
             return False
-
-        self._uart.reset_input_buffer()
 
         return True
 
-    def parse_reply(self, reply, divider=","):
+    def parse_reply(self, reply, divider=",", idx=0):
         """Attempts to find reply in UART buffer, reads up to divider.
         :param bytes reply: Expected response from FONA module.
         :param str divider: Divider character.
 
         """
         # attempt to find reply in buffer
-        if self._buf.find(reply) == -1:
+        p = self._buf.find(reply)
+        if p == -1:
             return False
+        p = self._buf[p:]
+        print(p)
 
-        p_buff =  self._buf[len(reply):]
+        p = self._buf[len(reply):]
+        p = p.decode("utf-8")
 
-        self._buf = b""
-        for i in range(len(p_buff)):
-            if chr(p_buff[i]) == divider:
-                break
-            self._buf += chr(p_buff[i])
+        p = p.split(divider)
+        p = p[idx]
+
+        self._buf = int(p)
 
         return True
 
@@ -318,6 +350,7 @@ class FONA:
 
             while self._uart.in_waiting:
                 c = self._uart.read(1)
+                #print(c)
                 if c == b'\r':
                     continue
                 if c == b'\n':
@@ -328,6 +361,7 @@ class FONA:
                         # second '\n' is EOL
                         timeout = 0
                         break
+                #print(c, self._buf)
                 self._buf += c
                 reply_idx += 1
 
