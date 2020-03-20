@@ -172,7 +172,6 @@ class FONA:
                 # Send command AT+SAPBR=3,1,"APN","<apn value>"
                 # where <apn value> is the configured APN value.
                 if not self.send_check_reply_quoted(b"AT+SAPBR=3,1,\"APN\",", self._apn, REPLY_OK, 10000):
-                    print("NO! RETURNING")
                     return False
 
                 # send ATT+CSTT, "apn", "user", "pass"
@@ -181,9 +180,9 @@ class FONA:
                 self._uart.write(b"AT+CSTT=")
                 self._uart.write(self._apn)
                 if self._apn_username is not None:
-                self._uart.write(+b","+self._apn_username)
+                    self._uart.write(b","+self._apn_username)
                 if self._apn_password is not None:
-                self._uart.write(+b","+self._apn_password)
+                    self._uart.write(b","+self._apn_password)
 
                 if self._debug:
                     print("\t---> AT+CSST='{}'".format(self._apn), end="")
@@ -194,6 +193,34 @@ class FONA:
                     print("") # endl
 
                 if not self.expect_reply(REPLY_OK):
+                    return False
+                
+                # set username
+                if self._apn_username:
+                    if not self.send_check_reply_quoted(b"AT+SAPBR=3,1,\"USER\",", self._apn_username, REPLY_OK, 10000):
+                        return False
+
+                # set password
+                if self._apn_password:
+                    if not self.send_check_reply_quoted(b"AT+SAPBR=3,1,\"PWD\",", self._apn_password, REPLY_OK, 10000):
+                        return False
+
+                # open GPRS context
+                if not self.send_check_reply(b"AT+SAPBR=1,1", REPLY_OK, 30000):
+                    return False
+                
+                # bring up wireless connection
+                if not self.send_check_reply(b"AT+CIICR", REPLY_OK, 10000):
+                    return False
+            else:
+                # disconnect all sockets
+                if not self.send_check_reply(b"AT+CIPSHUT", b"SHUT OK", 20000):
+                    return False
+                
+                # close GPRS context
+                if not self.send_check_reply(b"AT+SAPBR=0,1", REPLY_OK, 10000):
+                    return False
+                if not self.send_check_reply(b"AT+CGATT=0", REPLY_OK, 10000):
                     return False
 
         return True
