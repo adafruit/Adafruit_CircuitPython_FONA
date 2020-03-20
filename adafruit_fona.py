@@ -177,15 +177,26 @@ class FONA:
                 # send ATT+CSTT, "apn", "user", "pass"
                 self._uart.reset_input_buffer()
 
+                # TODO: This needs to be neatened up!
+                self._uart.write(b"AT+CSTT=\"")
+                self._uart.write(self._apn)
+                self._uart.write(b"\",\"")
+                self._uart.write(self._apn_username)
+                self._uart.write(b"\",\"")
+                self._uart.write(self._apn_password)
+                self._uart.write(b"\"")
+                """
+                # TODO: Re-impl, reference for adding username/pw
                 self._uart.write(b"AT+CSTT=")
                 self._uart.write(self._apn)
                 if self._apn_username is not None:
                     self._uart.write(b","+self._apn_username)
                 if self._apn_password is not None:
                     self._uart.write(b","+self._apn_password)
+                """
 
                 if self._debug:
-                    print("\t---> AT+CSST='{}'".format(self._apn), end="")
+                    print("\t---> AT+CSTT='{}'".format(self._apn), end="")
                     if self._apn_username is not None:
                         print(", '{}'".format(self._apn_username), end="")
                     if self._apn_password is not None:
@@ -194,21 +205,30 @@ class FONA:
 
                 if not self.expect_reply(REPLY_OK):
                     return False
-                
+
                 # set username
                 if self._apn_username:
-                    if not self.send_check_reply_quoted(b"AT+SAPBR=3,1,\"USER\",", self._apn_username, REPLY_OK, 10000):
+                    # TODO: This does not send as expected!
+                    #if not self.send_check_reply_quoted("AT+SAPBR=3,1,\"USER\",", self._apn_username, REPLY_OK, 10000):
+                    self._uart.write(b"AT+SAPBR=3,1,\"USER\",\"your username\"")
+                    if not self.expect_reply(REPLY_OK):
                         return False
+                self._buf = b""
 
                 # set password
                 if self._apn_password:
-                    if not self.send_check_reply_quoted(b"AT+SAPBR=3,1,\"PWD\",", self._apn_password, REPLY_OK, 10000):
+                    # TODO: This does not send as expected!
+                    #if not self.send_check_reply_quoted(b"AT+SAPBR=3,1,\"PWD\",", self._apn_password, REPLY_OK, 10000):
+                    #    return False
+                    self._uart.write(b"AT+SAPBR=3,1,\"password\",\"your password\"")
+                    if not self.expect_reply(REPLY_OK):
                         return False
+                self._buf = b""
 
                 # open GPRS context
                 if not self.send_check_reply(b"AT+SAPBR=1,1", REPLY_OK, 30000):
                     return False
-                
+
                 # bring up wireless connection
                 if not self.send_check_reply(b"AT+CIICR", REPLY_OK, 10000):
                     return False
@@ -507,6 +527,8 @@ class FONA:
                 reply_idx += 1
 
             if timeout == 0:
+                if self._debug:
+                    print("* Timed out!")
                 break
             timeout -= 1
             time.sleep(0.001)
@@ -545,9 +567,12 @@ class FONA:
         :param int timeout: Time to expect reply back from FONA, in milliseconds.
 
         """
+        self._buf = b""
+
         self._get_reply_quoted(prefix, suffix, timeout)
-        
+
         if reply not in self._buf:
+            print("not reply!")
             return False
         return True
 
@@ -575,7 +600,13 @@ class FONA:
 
         if self._debug:
             print("\t---> {}""{}""".format(prefix, suffix))
-        
+
+        self._uart.write(prefix)
+        self._uart.write(b'"')
+        self._uart.write(suffix)
+        self._uart.write(b'"')
+        self._uart.write(b"\r\n")
+
         line = self.read_line(timeout)
 
         if self._debug:

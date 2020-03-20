@@ -24,20 +24,18 @@ print("FONA OK\nFound: ", fona.version)
 
 #print("Module IEMI: ", fona.IEMI)
 
-# Configure GRPS
-print("configuring GRPS....")
-fona.config_GPRS((secrets["apn"], secrets["apn_username"], secrets["apn_password"]))
-print("configured!")
-
 #print("RSSI: {}dBm".format(fona.RSSI))
-
-#fona.network_status
 
 print("checking status:")
 status = fona.GPS
 
 print("turning on...")
 fona.GPS = True
+
+# Configure GRPS
+print("configuring GRPS....")
+fona.config_GPRS((secrets["apn"], secrets["apn_username"], secrets["apn_password"]))
+print("configured!")
 
 print("enabling GPRS")
 fona.GPRS = True
