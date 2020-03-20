@@ -94,9 +94,9 @@ class FONA:
             raise RuntimeError("Unable to find FONA. Please check connections.")
         self._init_fona()
 
-        self._apn = "FONAnet"
-        self._apn_username = 0
-        self._apn_password = 0
+        self._apn = None
+        self._apn_username = None
+        self._apn_password = None
         self._https_redirect = set_https_redir
         self._user_agent = "FONA"
         self._ok_reply = "OK"
@@ -137,21 +137,64 @@ class FONA:
     def GPRS(self):
         """Returns module's GPRS configuration, as a tuple."""
         return (self._apn, self._apn_username, self._apn_password)
-    
-    @GPRS.setter
-    def GPRS(self, gprs_on, config=None):
-        """Enables or disables GPRS configuration.
-        If config provided, sets GPRS configuration to provided tuple in format:
+
+    def config_GPRS(self, config):
+        """If config provided, sets GPRS configuration to provided tuple in format:
         (apn_network, apn_username, apn_password)
-        :param bool gprs_on: Turns on GPRS.
-        :param 
         """
-        if config:
-            apn, username, password = config
-            self._apn = apn
-            self._apn_username = username
-            self._apn_password = password
-        # TODO: add enableGPRS method
+        if self._debug:
+            print("* Setting GPRS Config to: ", config)
+        apn, username, password = config
+        self._apn = apn.encode()
+        self._apn_username = username.encode()
+        self._apn_password = password.encode()
+        return self._apn, self._apn_username, self._apn_password
+
+    @GPRS.setter
+    def GPRS(self, gprs_on):
+        """Enables or disables GPRS configuration.
+
+        :param bool gprs_on: Turns on GPRS.
+        """
+        if gprs_on:
+            # disconnect all sockets
+            self.send_check_reply(b"AT+CIPSHUT", b"SHUT OK", 20000)
+
+            if not self.send_check_reply(b"AT+CGATT=1", REPLY_OK, 10000):
+                return False
+            
+            # set bearer profile - connection type GPRS
+            if not self.send_check_reply(b"AT+SAPBR=3,1,\"CONTYPE\",\"GPRS\"", REPLY_OK, 10000):
+                return False
+            
+            # set bearer profile - access point name
+            if self._apn is not None:
+                # Send command AT+SAPBR=3,1,"APN","<apn value>"
+                # where <apn value> is the configured APN value.
+                if not self.send_check_reply_quoted(b"AT+SAPBR=3,1,\"APN\",", apn, 10000):
+                    return False
+
+                # send ATT+CSTT, "apn", "user", "pass"
+                self._uart.reset_input_buffer()
+
+                self._uart.write(b"AT+CSTT=\"")
+                self._uart.write(self._apn)
+                if self._apn_username is not None:
+                    self._uart.write(b"\",\"")
+                    self._uart.write(self._apn_username)
+                if self._apn_password is not None:
+                    self._uart.write(b"\",\"")
+                    self._uart.write(self._apn_password)
+                    self._uart.write(b"\"")
+                
+                if self._debug:
+                    print("\t---> AT+CSST='{}'".format(self._apn), end="")
+                    if self._apn_username is not None:
+                        print(", '{}'".format(self._apn_username), end="")
+                    if self._apn_password is not None:
+                        print(", '{}'".format(self._apn_password), end="")
+                    print("") # endl
+
         return True
 
 
@@ -447,7 +490,7 @@ class FONA:
         """Send command to the FONA and check its reply.
         :param bytes send: Data to send to the FONA.
         :param str reply: Expected reply from the FONA.
-        :param int timeout: Time to expect data back from FONA, in seconds.
+        :param int timeout: Time to expect data back from FONA, in milliseconds.
 
         """
         # flush the buffer
@@ -466,5 +509,34 @@ class FONA:
             if self._buf != None:
                 if reply in self._buf:
                     break
-            time.sleep(0.5)
         return True
+
+    def send_check_reply_quoted(prefix, suffix, reply, timeout=FONA_DEFAULT_TIMEOUT_MS):
+        """Send prefix, ", suffix, ", and a newline. Verify response against reply.
+        :param bytes prefix: Command prefix.
+        :param bytes prefix: Command ", suffix, ".
+        :param int timeout: Time to expect reply back from FONA, in milliseconds.
+
+        """
+        self._get_reply_quoted(prefix, suffix, timeout)
+        time.sleep(100)
+
+    def _get_reply_quoted(self, prefix, suffix, timeout):
+        """Send prefix, ", suffix, ", and newline.
+        Returns: Response (and also fills buffer with response).
+        :param bytes prefix: Command prefix.
+        :param bytes prefix: Command ", suffix, ".
+        :param int timeout: Time to expect reply back from FONA, in milliseconds.
+
+        """
+        self._uart.reset_input_buffer()
+
+        if self._debug:
+            print("\t---> {}""{}""".format(prefix, suffix))
+        
+        line = self.read_line(timeout)
+
+        if self._debug:
+            print("\t<--- ", self._buf)
+
+        return line
