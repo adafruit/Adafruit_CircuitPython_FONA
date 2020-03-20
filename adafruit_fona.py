@@ -171,22 +171,20 @@ class FONA:
             if self._apn is not None:
                 # Send command AT+SAPBR=3,1,"APN","<apn value>"
                 # where <apn value> is the configured APN value.
-                if not self.send_check_reply_quoted(b"AT+SAPBR=3,1,\"APN\",", apn, 10000):
+                if not self.send_check_reply_quoted(b"AT+SAPBR=3,1,\"APN\",", self._apn, REPLY_OK, 10000):
+                    print("NO! RETURNING")
                     return False
 
                 # send ATT+CSTT, "apn", "user", "pass"
                 self._uart.reset_input_buffer()
 
-                self._uart.write(b"AT+CSTT=\"")
+                self._uart.write(b"AT+CSTT=")
                 self._uart.write(self._apn)
                 if self._apn_username is not None:
-                    self._uart.write(b"\",\"")
-                    self._uart.write(self._apn_username)
+                self._uart.write(+b","+self._apn_username)
                 if self._apn_password is not None:
-                    self._uart.write(b"\",\"")
-                    self._uart.write(self._apn_password)
-                    self._uart.write(b"\"")
-                
+                self._uart.write(+b","+self._apn_password)
+
                 if self._debug:
                     print("\t---> AT+CSST='{}'".format(self._apn), end="")
                     if self._apn_username is not None:
@@ -195,8 +193,10 @@ class FONA:
                         print(", '{}'".format(self._apn_password), end="")
                     print("") # endl
 
-        return True
+                if not self.expect_reply(REPLY_OK):
+                    return False
 
+        return True
 
     @property
     def network_status(self):
@@ -511,7 +511,7 @@ class FONA:
                     break
         return True
 
-    def send_check_reply_quoted(prefix, suffix, reply, timeout=FONA_DEFAULT_TIMEOUT_MS):
+    def send_check_reply_quoted(self, prefix, suffix, reply, timeout=FONA_DEFAULT_TIMEOUT_MS):
         """Send prefix, ", suffix, ", and a newline. Verify response against reply.
         :param bytes prefix: Command prefix.
         :param bytes prefix: Command ", suffix, ".
@@ -519,7 +519,22 @@ class FONA:
 
         """
         self._get_reply_quoted(prefix, suffix, timeout)
-        time.sleep(100)
+        
+        if reply not in self._buf:
+            return False
+        return True
+
+    def expect_reply(self, reply, timeout=FONA_DEFAULT_TIMEOUT_MS):
+        """Reads line from FONA module and compares to reply from FONA module.
+        :param bytes reply: Expected reply from module.
+
+        """
+        self.read_line(timeout)
+        if self._debug:
+            print("\t<--- ", self._buf)
+        if reply not in self._buf:
+            return False
+        return True
 
     def _get_reply_quoted(self, prefix, suffix, timeout):
         """Send prefix, ", suffix, ", and newline.
