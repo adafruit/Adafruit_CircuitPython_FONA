@@ -141,7 +141,6 @@ class FONA:
             return False
         return True
 
-
     def set_GRPS(self, config):
         """If config provided, sets GPRS configuration to provided tuple in format:
         (apn_network, apn_username, apn_password)
@@ -309,33 +308,29 @@ class FONA:
             print("2D fix")
         elif stat == 3:
             print("3D fix")
-        self.read_line()
+        else:
+            print("Failed to query module")
         return stat
 
     def _gps_status(self):
         """Returns GPS status or fix."""
-        print("GPS STATUS")
+        if self._debug:
+            print("GPS STATUS")
         if self._fona_type == FONA_808_V2:
             # 808 V2 uses GNS commands and doesn't have an explicit 2D/3D fix status.
             # Instead just look for a fix and if found assume it's a 3D fix.
             self.get_reply(b"AT+CGNSINF")
-            p = self._buf.find(b"+CGNSINF: ")
-            if p == -1:
+
+            self.read_line()
+
+            if not b"+CGNSINF: " in self._buf:
                 return False
-            
-            p += 10
-            if chr(self._buf[p]) == 0:
-                # GPS is OFF!
-                return False
-            # skip to fix status
-            p += 2
-            if chr(self._buf[p]) == 1:
-                return 3
-            else:
-                return 1
-        # TODO: implement other fona versions: 3g, 808v1
+
+            if int(self._buf[12:13].decode("utf-8")) == 0:
+                return 0 # GPS is OFF!
         else:
-            return 0
+            # TODO: implement other fona versions: 3g, 808v1
+            raise NotImplementedError("FONA 3G and FONA 808 v1 not currently supported by this library.")
 
     @GPS.setter
     def GPS(self, gps_on=False):
@@ -350,7 +345,7 @@ class FONA:
 
         # check if already enabled or disabled
         if self._fona_type == FONA_808_V2:
-            if not self.send_parse_reply(b"AT+CGNSPWR?", b"+CGNSPWR: "):
+            if not self.send_parse_reply(b"AT+CGNSPWR?", b"+CGNSPWR: ", ":"):
                 return False
             else:
                 self._buf = b""
