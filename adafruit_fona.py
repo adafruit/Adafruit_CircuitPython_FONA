@@ -134,10 +134,15 @@ class FONA:
 
     @property
     def GPRS(self):
-        """Returns module's GPRS configuration, as a tuple."""
-        return (self._apn, self._apn_username, self._apn_password)
+        """Returns module's GPRS state."""
+        if not self.send_parse_reply(b"AT+CGATT?", b"+CGATT: ", ":"):
+            return False
+        if self._buf == 0: # +CGATT: 0
+            return False
+        return True
 
-    def config_GPRS(self, config):
+
+    def set_GRPS(self, config):
         """If config provided, sets GPRS configuration to provided tuple in format:
         (apn_network, apn_username, apn_password)
         """
