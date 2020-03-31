@@ -92,7 +92,6 @@ class FONA:
         self._rst = rst
         if not self._init_fona():
             raise RuntimeError("Unable to find FONA. Please check connections.")
-        self._init_fona()
 
         self._apn = None
         self._apn_username = None
