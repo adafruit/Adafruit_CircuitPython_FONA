@@ -339,21 +339,23 @@ class FONA:
         :param bool gps_on: Enables the GPS module, disabled by default.
 
         """
+        if self._debug:
+            print("* Setting GPS")
         if not (self._fona_type == FONA_3G_A or self._fona_type == FONA_3G_E or
                     self._fona_type == FONA_808_V1 or self._fona_type == FONA_808_V2):
                         raise TypeError("GPS unsupported for this FONA module.")
 
         # check if already enabled or disabled
         if self._fona_type == FONA_808_V2:
-            if not self.send_parse_reply(b"AT+CGNSPWR?", b"+CGNSPWR: ", ":"):
+            if not self.send_parse_reply(b"AT+CGPSPWR?", b"+CGPSPWR: ", ":"):
+                state = int(self._buf.decode("utf-8"))
                 return False
-            else:
-                self._buf = b""
-                self.read_line()
-                if not self.send_parse_reply(b"AT+CGPSPWR?", b"+CGPSPWR: "):
+            elif not self.send_parse_reply(b"AT+CGNSPWR?", b"+CGNSPWR: ", ":"):
+                    state = int(self._buf.decode("utf-8"))
                     return False
 
-        if gps_on:
+        # TODO: Failure here!
+        if gps_on and not state:
             if self._fona_type == FONA_808_V2:
                 # try GNS
                 if not self.send_check_reply(b"AT+CGNSPWR=1", REPLY_OK):
@@ -520,6 +522,15 @@ class FONA:
 
         return reply_idx
 
+
+    def send_check_reply(self, send, reply, timeout=FONA_DEFAULT_TIMEOUT_MS):
+        if not self.get_reply(send, timeout):
+            return False
+
+        if not reply in self._buf:
+            return False
+        return True
+
     def get_reply(self, data, timeout=FONA_DEFAULT_TIMEOUT_MS):
         """Send data to FONA, read response into buffer.
         :param bytes data: Data to send to FONA module.
@@ -538,16 +549,6 @@ class FONA:
         if self._debug:
             print("\t<--- ", self._buf)
         return line
-
-
-    def send_check_reply(self, send, reply, timeout=FONA_DEFAULT_TIMEOUT_MS):
-        if not self.get_reply(send, timeout):
-            return False
-
-        if not reply in self._buf:
-            return False
-        return True
-
 
     def send_check_reply_quoted(self, prefix, suffix, reply, timeout=FONA_DEFAULT_TIMEOUT_MS):
         """Send prefix, ", suffix, ", and a newline. Verify response against reply.
