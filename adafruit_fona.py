@@ -348,16 +348,19 @@ class FONA:
         # check if already enabled or disabled
         if self._fona_type == FONA_808_V2:
             if not self.send_parse_reply(b"AT+CGPSPWR?", b"+CGPSPWR: ", ":"):
-                state = int(self._buf.decode("utf-8"))
                 return False
-            elif not self.send_parse_reply(b"AT+CGNSPWR?", b"+CGNSPWR: ", ":"):
-                    state = int(self._buf.decode("utf-8"))
+            else:
+                self.read_line()
+                if not self.send_parse_reply(b"AT+CGNSPWR?", b"+CGNSPWR: ", ":"):
                     return False
 
-        # TODO: Failure here!
+        state = self._buf
+
         if gps_on and not state:
+            self.read_line()
             if self._fona_type == FONA_808_V2:
                 # try GNS
+                print("trying GNS...")
                 if not self.send_check_reply(b"AT+CGNSPWR=1", REPLY_OK):
                     return False
             else:
@@ -491,6 +494,7 @@ class FONA:
         :param bool multiline: Read multiple lines.
 
         """
+        self._buf = b""
         reply_idx = 0
         while timeout:
             if reply_idx >= 254:
