@@ -309,7 +309,7 @@ class FONA:
         elif stat == 3:
             print("3D fix")
         else:
-            print("Failed to query module")
+            print("Failed to query GPS module, is it connected?")
         return stat
 
     def _gps_status(self):
@@ -321,16 +321,20 @@ class FONA:
             # Instead just look for a fix and if found assume it's a 3D fix.
             self.get_reply(b"AT+CGNSINF")
 
+            b = self._buf
             self.read_line()
 
-            if not b"+CGNSINF: " in self._buf:
+            if not b"+CGNSINF: " in b:
                 return False
 
-            if int(self._buf[12:13].decode("utf-8")) == 0:
+            if int(b[10:11].decode("utf-8")) == 0:
                 return 0 # GPS is OFF!
+            elif int(b[10:11].decode("utf-8")) == 1:
+                return 3 # assume the fix status is 1, we have a 3D fix
         else:
             # TODO: implement other fona versions: 3g, 808v1
             raise NotImplementedError("FONA 3G and FONA 808 v1 not currently supported by this library.")
+        
 
     @GPS.setter
     def GPS(self, gps_on=False):
