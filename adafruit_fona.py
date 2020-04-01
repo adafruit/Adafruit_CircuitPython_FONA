@@ -321,15 +321,15 @@ class FONA:
             # Instead just look for a fix and if found assume it's a 3D fix.
             self.get_reply(b"AT+CGNSINF")
 
-            b = self._buf
+            if not b"+CGNSINF: " in self._buf:
+                return False
+            
+            status = int(self._buf[10:11].decode("utf-8"))
             self.read_line()
 
-            if not b"+CGNSINF: " in b:
-                return False
-
-            if int(b[10:11].decode("utf-8")) == 0:
+            if status == 0:
                 return 0 # GPS is OFF!
-            elif int(b[10:11].decode("utf-8")) == 1:
+            elif status == 1:
                 return 3 # assume the fix status is 1, we have a 3D fix
         else:
             # TODO: implement other fona versions: 3g, 808v1
