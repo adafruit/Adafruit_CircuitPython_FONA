@@ -135,15 +135,17 @@ class FONA:
     @property
     def GPRS(self):
         """Returns module's GPRS state."""
+        if self._debug:
+            print("* Check GPRS State")
+        # NOTE: This may do too much, just check CGATT: 0/1 and return!
         if not self.send_parse_reply(b"AT+CGATT?", b"+CGATT: ", ":"):
             return False
-        if self._buf == 0: # +CGATT: 0
-            return False
-        return True
+        return self._buf
 
     def set_GRPS(self, config):
         """If config provided, sets GPRS configuration to provided tuple in format:
         (apn_network, apn_username, apn_password)
+
         """
         if self._debug:
             print("* Setting GPRS Config to: ", config)
@@ -154,91 +156,55 @@ class FONA:
         return self._apn, self._apn_username, self._apn_password
 
     @GPRS.setter
-    def GPRS(self, gprs_on):
+    def GPRS(self, gprs_on=True):
         """Enables or disables GPRS configuration.
+        :param bool gprs_on: Turns on GPRS, enabled by default.
 
-        :param bool gprs_on: Turns on GPRS.
         """
         if gprs_on:
+            if self._debug:
+                print("* Enabling GPRS..")
+
             # disconnect all sockets
             self.send_check_reply(b"AT+CIPSHUT", b"SHUT OK", 20000)
 
             if not self.send_check_reply(b"AT+CGATT=1", REPLY_OK, 10000):
                 return False
-            
-            # set bearer profile - connection type GPRS
+
+            # set bearer profile - access point name
             if not self.send_check_reply(b"AT+SAPBR=3,1,\"CONTYPE\",\"GPRS\"", REPLY_OK, 10000):
                 return False
-            
-            # set bearer profile - access point name
+
             if self._apn is not None:
                 # Send command AT+SAPBR=3,1,"APN","<apn value>"
-                #where <apn value> is the configured APN value.
-                if not self.send_check_reply_quoted(b"AT+SAPBR=3,1,\"APN\",", self._apn, REPLY_OK, 10000):
+                # where <apn value> is the configured APN value.
+
+                self.send_check_reply_quoted(b"AT+SAPBR=3,1,\"APN\",", b"wholesale", REPLY_OK, 10000)
+
+
+                data = b"AT+CSTT=\"wholesale\",\"your username\",\"your password\""
+                if not self.send_check_reply(data, REPLY_OK, 10000):
                     return False
 
-                # send ATT+CSTT, "apn", "user", "pass"
                 self._uart.reset_input_buffer()
 
-                # TODO: This needs to be neatened up!
-                self._uart.write(b"AT+CSTT=\"")
-                self._uart.write(self._apn)
-                self._uart.write(b"\",\"")
-                self._uart.write(self._apn_username)
-                self._uart.write(b"\",\"")
-                self._uart.write(self._apn_password)
-                self._uart.write(b"\"")
-                """
-                # TODO: Re-impl, reference for adding username/pw
-                self._uart.write(b"AT+CSTT=")
-                self._uart.write(self._apn)
-                if self._apn_username is not None:
-                    self._uart.write(b","+self._apn_username)
-                if self._apn_password is not None:
-                    self._uart.write(b","+self._apn_password)
-                """
-
-                if self._debug:
-                    print("\t---> AT+CSTT='{}'".format(self._apn), end="")
-                    if self._apn_username is not None:
-                        print(", '{}'".format(self._apn_username), end="")
-                    if self._apn_password is not None:
-                        print(", '{}'".format(self._apn_password), end="")
-                    print("") # endl
-
-                if not self.expect_reply(REPLY_OK):
+                data = b"AT+SAPBR=3,1,\"USER\",\"your username\""
+                if not self.send_check_reply(data, REPLY_OK, 10000):
                     return False
 
-                # set username
-                print("username")
-                if self._apn_username:
-                    # TODO: This does not send as expected!
-                    #if not self.send_check_reply_quoted(b"AT+SAPBR=3,1,\"USER\",", self._apn_username, REPLY_OK, 10000):
-                    self._uart.write(b"AT+SAPBR=3,1,\"USER\",\"your username\"")
-                    if not self.expect_reply(REPLY_OK):
-                        return False
-                self._buf = b""
-
-                # set password
-                print("pw")
-                if self._apn_password:
-                    # TODO: This does not send as expected!
-                    #self._uart.write(b"AT+SAPBR=3,1,\"PWD\",\"your password\"")
-                    #if not self.expect_reply(REPLY_OK):
-                    #    print("return!")
-                    if not self.send_check_reply_quoted(b"AT+SAPBR=3,1,\"PWD\",", self._apn_password, REPLY_OK, 10000):
-                        return False
-                self._buf = b""
+                data = b"AT+SAPBR=3,1,\"PWD\",\"your PASSWORD\""
+                if not self.send_check_reply(data, REPLY_OK, 10000):
+                    return False
 
                 # open GPRS context
-                print("open context")
-                if not self.send_check_reply(b"AT+SAPBR=1,1", REPLY_OK, 30000):
-                    return False
+                if not self.send_check_reply(b"AT+SAPBR=1,1", REPLY_OK, 100000):
+                    print("TODO: Debug")
 
                 # bring up wireless connection
-                print("bring up")
                 if not self.send_check_reply(b"AT+CIICR", REPLY_OK, 10000):
                     return False
+
+
             else:
                 # disconnect all sockets
                 if not self.send_check_reply(b"AT+CIPSHUT", b"SHUT OK", 20000):
@@ -255,6 +221,7 @@ class FONA:
     @property
     def network_status(self):
         """Returns cellular/network status"""
+        self.read_line()
         if not self.send_parse_reply(b"AT+CREG?", b"+CREG: ", idx=1):
             return False
         if self._buf == 0:
@@ -273,7 +240,7 @@ class FONA:
 
     @property
     def RSSI(self):
-        """Returns cellular network's Received Signal Strength Indicator (RSSI)."""
+        """Returns cellular network'sReceived Signal Strength Indicator (RSSI)."""
         if not self.send_parse_reply(b"AT+CSQ", b"+CSQ: "):
             return False
 
@@ -386,8 +353,26 @@ class FONA:
 
         if not self.parse_reply(reply_data, divider, idx):
             return False
-
         return True
+
+    def get_reply(self, data, timeout=FONA_DEFAULT_TIMEOUT_MS):
+        """Send data to FONA, read response into buffer.
+        :param bytes data: Data to send to FONA module.
+        :param int timeout: Time to wait for UART response.
+
+        """
+        self._uart.reset_input_buffer()
+        if self._debug:
+            print("\t---> ", data)
+
+        result = self._uart.write(data+"\r\n")
+
+        self._buf = b""
+        line = self.read_line()
+
+        if self._debug:
+            print("\t<--- ", self._buf)
+        return line
 
     def parse_reply(self, reply, divider=",", idx=0):
         """Attempts to find reply in UART buffer, reads up to divider.
@@ -482,9 +467,7 @@ class FONA:
             
             if self._buf.find(b"SIM800H") != -1:
                 self._fona_type = FONA_800_H
-
         return True
-
 
     def read_line(self, timeout=FONA_DEFAULT_TIMEOUT_MS, multiline=False):
         """Reads one or multiple lines into the buffer.
@@ -533,24 +516,6 @@ class FONA:
             return False
         return True
 
-    def get_reply(self, data, timeout=FONA_DEFAULT_TIMEOUT_MS):
-        """Send data to FONA, read response into buffer.
-        :param bytes data: Data to send to FONA module.
-        :param int timeout: Time to wait for UART response.
-
-        """
-        self._uart.reset_input_buffer()
-        if self._debug:
-            print("\t---> ", data)
-
-        result = self._uart.write(data+"\r\n")
-
-        self._buf = b""
-        line = self.read_line()
-
-        if self._debug:
-            print("\t<--- ", self._buf)
-        return line
 
     def send_check_reply_quoted(self, prefix, suffix, reply, timeout=FONA_DEFAULT_TIMEOUT_MS):
         """Send prefix, ", suffix, ", and a newline. Verify response against reply.
@@ -563,20 +528,9 @@ class FONA:
 
         self._get_reply_quoted(prefix, suffix, timeout)
 
+        print("\treply: ", self._buf)
         if reply not in self._buf:
             print("not reply!")
-            return False
-        return True
-
-    def expect_reply(self, reply, timeout=FONA_DEFAULT_TIMEOUT_MS):
-        """Reads line from FONA module and compares to reply from FONA module.
-        :param bytes reply: Expected reply from module.
-
-        """
-        self.read_line(timeout)
-        if self._debug:
-            print("\t<--- ", self._buf)
-        if reply not in self._buf:
             return False
         return True
 
@@ -597,10 +551,13 @@ class FONA:
             print(suffix, end="")
             print('""')
 
+
         self._uart.write(prefix)
-        self._uart.write(b'""')
+        self._uart.write(b"\"")
         self._uart.write(suffix)
-        self._uart.write(b'""')
+        self._uart.write(b"\"")
+        self._uart.write(b"\r\n")
+
 
         line = self.read_line(timeout)
 
@@ -608,3 +565,16 @@ class FONA:
             print("\t<--- ", self._buf)
 
         return line
+
+    def expect_reply(self, reply, timeout=FONA_DEFAULT_TIMEOUT_MS):
+        """Reads line from FONA module and compares to reply from FONA module.
+        :param bytes reply: Expected reply from module.
+
+        """
+        self.read_line(timeout)
+        if self._debug:
+            print("\t<--- ", self._buf)
+        if reply not in self._buf:
+            return False
+        return True
+
