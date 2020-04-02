@@ -225,23 +225,29 @@ class FONA:
     @property
     def network_status(self):
         """Returns cellular/network status"""
-        self.read_line()
         if not self.send_parse_reply(b"AT+CREG?", b"+CREG: ", idx=1):
             return False
         if self._buf == 0:
-            return "Not Registered!"
+            # Not Registered
+            return self._buf
         elif self._buf == 1:
-            return "Registered (home)"
+            # Registered (home)
+            return self._buf
         elif self._buf == 2:
-            return "Not Registered (searching)"
+            # Not Registered (searching)
+            return self._buf
         elif self._buf == 3:
-            return "Denied"
+            # Denied
+            return self._buf
         elif self._buf == 4:
-            return "Unknown"
+            # Unknown
+            return self._buf
         elif self._buf == 5:
-            return "Registered Roaming"
+            # Registered Roaming
+            return self._buf
         else:
-            return "Unknown"
+            # "Unknown"
+            return self._buf
 
     @property
     def RSSI(self):
