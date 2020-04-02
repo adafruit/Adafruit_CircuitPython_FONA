@@ -570,24 +570,31 @@ class FONA:
             return False
         return True
 
-    def get_reply(self, data, timeout=FONA_DEFAULT_TIMEOUT_MS):
+
+    def get_reply(self, data=None, prefix=None, suffix=None, timeout=FONA_DEFAULT_TIMEOUT_MS):
         """Send data to FONA, read response into buffer.
         :param bytes data: Data to send to FONA module.
         :param int timeout: Time to wait for UART response.
 
         """
         self._uart.reset_input_buffer()
-        if self._debug:
-            print("\t---> ", data)
 
-        result = self._uart.write(data+"\r\n")
+        if data is not None:
+            if self._debug:
+                print("\t---> ", data)
+            self._uart.write(data+"\r\n")
+        else:
+            if self._debug:
+                print("\t---> {}{}".format(prefix, suffix))
+            self._uart.write(prefix+suffix+b"\r\n")
 
         self._buf = b""
-        line = self.read_line()
+        line = self.read_line(timeout)
 
         if self._debug:
             print("\t<--- ", self._buf)
         return line
+
 
     def parse_reply(self, reply, divider=",", idx=0):
         """Attempts to find reply in UART buffer, reads up to divider.
