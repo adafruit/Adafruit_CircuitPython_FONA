@@ -132,6 +132,79 @@ class FONA:
         iemi = self._buf[0:15]
         return iemi.decode("utf-8")
 
+    def _init_fona(self):
+        """Initializes FONA module."""
+        # RST module
+        self._rst.switch_to_output()
+        self._rst.value = True
+        time.sleep(0.01)
+        self._rst.value = False
+        time.sleep(0.1)
+        self._rst.value = True
+
+        if self._debug:
+            print("Attempting to open comm with ATs")
+        timeout = 7
+        while timeout > 0:
+            if self.send_check_reply(CMD_AT, REPLY_OK):
+                break
+            if self.send_check_reply(CMD_AT, REPLY_AT):
+                break
+            time.sleep(0.5)
+            timeout -= 500
+
+        if timeout <= 0:
+            if self._debug:
+                print(" * Timeout: No response to AT. Last ditch attempt.")
+            self.send_check_reply(CMD_AT, REPLY_OK)
+            time.sleep(0.1)
+            self.send_check_reply(CMD_AT, REPLY_OK)
+            time.sleep(0.1)
+            self.send_check_reply(CMD_AT, REPLY_OK)
+            time.sleep(0.1)
+
+        # turn off echo
+        self.send_check_reply(b"ATE0", REPLY_OK)
+        time.sleep(0.1)
+
+        if not self.send_check_reply(b"ATE0", REPLY_OK):
+            return False
+        time.sleep(0.1)
+
+        # turn on hangupitude
+        self.send_check_reply(b"AT+CVHU=0", REPLY_OK)
+        time.sleep(0.1)
+
+        self._buf = b""
+        self._uart.reset_input_buffer()
+
+        if self._debug:
+            print("\t---> ", "ATI")
+        self._uart.write(b"ATI\r\n")
+        self.read_line(multiline=True)
+
+        if self._buf.find(b"SIM808 R14") != -1:
+            self._fona_type = FONA_808_V2
+        elif self._buf.find(b"SIM808 R13") != -1:
+            self._fona_type = FONA_808_V1
+        elif self._buf.find(b"SIMCOM_SIM5320A") != -1:
+            self._fona_type = FONA_3G_A
+        elif self._buf.find(b"SIMCOM_SIM5320E") != -1:
+            self._fona_type = FONA_3G_E
+
+        if self._fona_type == FONA_800_L:
+            # determine if _H
+            if self._debug:
+                print("\t ---> AT+GMM")
+            self._uart.write(b"AT+GMM\r\n")
+            self.read_line(multiline=True)
+            if self._debug:
+                print("\t <---", self._buf)
+            
+            if self._buf.find(b"SIM800H") != -1:
+                self._fona_type = FONA_800_H
+        return True
+
     @property
     def GPRS(self):
         """Returns module's GPRS state."""
@@ -357,6 +430,106 @@ class FONA:
 
         return True
 
+    ### HTTP ###
+
+    @property
+    def http_ssl(self):
+        """Returns if SSL is used for HTTP."""
+        if not self.send_parse_reply(b"AT+HTTPSSL?", b"+HTTPSSL: ", ":"):
+            return False
+        return True
+    
+    @http_ssl.setter
+    def http_ssl(self, enable):
+        """Sets if SSL is used for HTTP.
+        :param bool enable: Enable or disable SSL for HTTP
+
+        """
+        if enable:
+            if not self.send_check_reply(b"AT+HTTPSSL=1", REPLY_OK):
+                return False
+        else:
+            if not self.send_check_reply(b"AT+HTTPSSL=0", REPLY_OK):
+                return True
+
+
+    def _http_setup(self, url):
+        """Initializes HTTP and HTTPS configuration
+        :param str url: Desired HTTP/HTTPS address.
+
+        """
+        # terminate any http sessions
+        self._http_terminate()
+
+        # initialize HTTP service
+        if not self._http_init():
+            return False
+        
+        # set client id
+        if not self._http_para(b"CID", 1):
+            return False
+        # set user agent
+        if not self._http_para(b"UA", self._user_agent):
+            return False
+        # set URL
+        if not self._http_para(b"URL", url):
+            return False
+        
+        # set https redirect
+        if self._https_redirect:
+            if not self._http_para(b"REDIR", 1):
+                return False
+            # set HTTP SSL
+            if not self.http_ssl(True):
+                return False
+
+        pass
+
+    def _http_para(self, param, value):
+        """Command sets up HTTP parameters for the HTTP call.
+        Parameters which can be set are: CID, URL,
+            redirect, and useragent.
+        """
+        self._http_para_start(param, True)
+        self._uart.write(value)
+        # end
+        pass
+
+    def _http_para_start(self, param, quoted=False):
+        self._uart.reset_input_buffer()
+
+        if self._debug:
+            print("\t---> ")
+            print("AT+HTTPPARA=\"", end="")
+            print(param, end="")
+            print('"')
+        self._uart.write(b"AT+HTTPPARA=\"")
+        self._uart.write(param)
+        if quoted:
+            self._uart.write(b"\",\"")
+        else:
+            self._uart.write(b"\",")
+        self._uart.write(b"\r\n")
+
+    def _http_para_end(self, quoted=False):
+        if quoted:
+            self._uart.write(b'"')
+        else:
+            self._uart.write(b"\r\n")
+        self._uart.write(b"\r\n")
+
+
+    def _http_terminate(self):
+        """Terminates the HTTP session"""
+        self.send_check_reply(b"AT+HTTPTERM", REPLY_OK)
+
+    def _http_init(self):
+        """ Initializes the HTTP service."""
+        return self.send_check_reply(b"AT+HTTPINIT", REPLY_OK)
+
+
+    ### UART Reply/Response Helpers ###
+
     def send_parse_reply(self, send_data, reply_data, divider=',', idx=0):
         """Sends data to FONA module, parses reply data returned.
         :param bytes send_data: Data to send to the module.
@@ -409,79 +582,6 @@ class FONA:
 
         self._buf = int(p)
 
-        return True
-
-    def _init_fona(self):
-        """Initializes FONA module."""
-        # RST module
-        self._rst.switch_to_output()
-        self._rst.value = True
-        time.sleep(0.01)
-        self._rst.value = False
-        time.sleep(0.1)
-        self._rst.value = True
-
-        if self._debug:
-            print("Attempting to open comm with ATs")
-        timeout = 7
-        while timeout > 0:
-            if self.send_check_reply(CMD_AT, REPLY_OK):
-                break
-            if self.send_check_reply(CMD_AT, REPLY_AT):
-                break
-            time.sleep(0.5)
-            timeout -= 500
-
-        if timeout <= 0:
-            if self._debug:
-                print(" * Timeout: No response to AT. Last ditch attempt.")
-            self.send_check_reply(CMD_AT, REPLY_OK)
-            time.sleep(0.1)
-            self.send_check_reply(CMD_AT, REPLY_OK)
-            time.sleep(0.1)
-            self.send_check_reply(CMD_AT, REPLY_OK)
-            time.sleep(0.1)
-
-        # turn off echo
-        self.send_check_reply(b"ATE0", REPLY_OK)
-        time.sleep(0.1)
-
-        if not self.send_check_reply(b"ATE0", REPLY_OK):
-            return False
-        time.sleep(0.1)
-
-        # turn on hangupitude
-        self.send_check_reply(b"AT+CVHU=0", REPLY_OK)
-        time.sleep(0.1)
-
-        self._buf = b""
-        self._uart.reset_input_buffer()
-
-        if self._debug:
-            print("\t---> ", "ATI")
-        self._uart.write(b"ATI\r\n")
-        self.read_line(multiline=True)
-
-        if self._buf.find(b"SIM808 R14") != -1:
-            self._fona_type = FONA_808_V2
-        elif self._buf.find(b"SIM808 R13") != -1:
-            self._fona_type = FONA_808_V1
-        elif self._buf.find(b"SIMCOM_SIM5320A") != -1:
-            self._fona_type = FONA_3G_A
-        elif self._buf.find(b"SIMCOM_SIM5320E") != -1:
-            self._fona_type = FONA_3G_E
-
-        if self._fona_type == FONA_800_L:
-            # determine if _H
-            if self._debug:
-                print("\t ---> AT+GMM")
-            self._uart.write(b"AT+GMM\r\n")
-            self.read_line(multiline=True)
-            if self._debug:
-                print("\t <---", self._buf)
-            
-            if self._buf.find(b"SIM800H") != -1:
-                self._fona_type = FONA_800_H
         return True
 
     def read_line(self, timeout=FONA_DEFAULT_TIMEOUT_MS, multiline=False):
