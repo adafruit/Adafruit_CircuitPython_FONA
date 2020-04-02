@@ -179,19 +179,24 @@ class FONA:
                 # Send command AT+SAPBR=3,1,"APN","<apn value>"
                 # where <apn value> is the configured APN value.
 
-                self.send_check_reply_quoted(b"AT+SAPBR=3,1,\"APN\",", b"wholesale", REPLY_OK, 10000)
+                self.send_check_reply_quoted(b"AT+SAPBR=3,1,\"APN\",", self._apn, REPLY_OK, 10000)
 
+                # send AT+CSTT,"apn","user","pass"
+                self._uart.reset_input_buffer()
 
+                # TODO: This needs to be modified to send over uart and check reply
                 data = b"AT+CSTT=\"wholesale\",\"your username\",\"your password\""
                 if not self.send_check_reply(data, REPLY_OK, 10000):
                     return False
 
-                self._uart.reset_input_buffer()
-
+                # TODO: This should be switched to _quoted!
                 data = b"AT+SAPBR=3,1,\"USER\",\"your username\""
-                if not self.send_check_reply(data, REPLY_OK, 10000):
-                    return False
+                
+                self.send_check_reply_quoted(b"AT+SAPBR=3,1,\"USER\",", self._apn_username, REPLY_OK, 10000)
+                #if not self.send_check_reply(data, REPLY_OK, 10000):
+                #    return False
 
+                # TODO: This should be switched to _quoted!
                 data = b"AT+SAPBR=3,1,\"PWD\",\"your PASSWORD\""
                 if not self.send_check_reply(data, REPLY_OK, 10000):
                     return False
@@ -203,7 +208,6 @@ class FONA:
                 # bring up wireless connection
                 if not self.send_check_reply(b"AT+CIICR", REPLY_OK, 10000):
                     return False
-
 
             else:
                 # disconnect all sockets
@@ -225,18 +229,19 @@ class FONA:
         if not self.send_parse_reply(b"AT+CREG?", b"+CREG: ", idx=1):
             return False
         if self._buf == 0:
-            print("Not Registered!")
+            return "Not Registered!"
         elif self._buf == 1:
-            print("Registered (home)")
+            return "Registered (home)"
         elif self._buf == 2:
-            print("Not Registered (searching)")
+            return "Not Registered (searching)"
         elif self._buf == 3:
-            print("Denied")
+            return "Denied"
         elif self._buf == 4:
-            print("Unknown")
+            return "Unknown"
         elif self._buf == 5:
-            print("Registered Roaming")
-        return self._buf
+            return "Registered Roaming"
+        else:
+            return "Unknown"
 
     @property
     def RSSI(self):
@@ -257,13 +262,12 @@ class FONA:
             rssi = map_range(reply_num, 2, 30, -110, -54)
 
         # read out the 'ok'
-        self._buf = b""
         self.read_line()
         return rssi
 
     @property
     def GPS(self):
-        """Returns if the GPS is disabled or enabled."""
+        """Returns the GPS status, as a string."""
         if self._debug:
             print("GPS STATUS")
         if self._fona_type == FONA_808_V2:
@@ -275,27 +279,26 @@ class FONA:
                 return False
 
             status = int(self._buf[10:11].decode("utf-8"))
-            print("Status: ", status)
             if status == 1:
                 status = 3 # assume 3D fix
             self.read_line()
+        elif self._fona_type == FONA_3G_A or self._fona_type == FONA_3G_E:
+            raise NotImplementedError("FONA 3G not currently supported by this library.")
         else:
-            # TODO: implement other fona versions: 3g, 808v1
-            raise NotImplementedError("FONA 3G and FONA 808 v1 not currently supported by this library.")
+            raise NotImplementedError("FONA 808 v1 not currently supported by this library.")
 
         if status < 0:
-            print("Failed to query module")
+            return "Failed to query module"
         elif status == 0:
-            print("GPS off")
+            return "GPS off"
         elif status == 1:
-            print("No fix")
+            return "No fix"
         elif status == 2:
-            print("2D fix")
+            return "2D fix"
         elif status == 3:
-            print("3D fix")
+            return "3D fix"
         else:
-            print("Failed to query GPS module, is it connected?")
-        return status
+            return "Failed to query GPS module, is it connected?"
 
     @GPS.setter
     def GPS(self, gps_on=False):
@@ -528,9 +531,7 @@ class FONA:
 
         self._get_reply_quoted(prefix, suffix, timeout)
 
-        print("\treply: ", self._buf)
         if reply not in self._buf:
-            print("not reply!")
             return False
         return True
 
