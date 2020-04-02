@@ -137,7 +137,6 @@ class FONA:
         """Returns module's GPRS state."""
         if self._debug:
             print("* Check GPRS State")
-        # NOTE: This may do too much, just check CGATT: 0/1 and return!
         if not self.send_parse_reply(b"AT+CGATT?", b"+CGATT: ", ":"):
             return False
         return self._buf
@@ -185,36 +184,43 @@ class FONA:
                 self._uart.reset_input_buffer()
 
                 # TODO: This needs to be modified to send over uart and check reply
-                data = b"AT+CSTT=\"wholesale\",\"your username\",\"your password\""
-                if not self.send_check_reply(data, REPLY_OK, 10000):
+                self._uart.write(b"AT+CSTT=\"")
+                self._uart.write(self._apn)
+
+                if self._apn_username is not None:
+                    self._uart.write(b"\",\"")
+                    self._uart.write(self._apn_username)
+
+                if self._apn_password is not None:
+                    self._uart.write(b"\",\"")
+                    self._uart.write(self._apn_password)
+                self._uart.write(b"\"")
+                self._uart.write(b"\r\n")
+
+                if not self.get_reply(REPLY_OK):
                     return False
 
-                # TODO: This should be switched to _quoted!
-                data = b"AT+SAPBR=3,1,\"USER\",\"your username\""
-                
-                self.send_check_reply_quoted(b"AT+SAPBR=3,1,\"USER\",", self._apn_username, REPLY_OK, 10000)
-                #if not self.send_check_reply(data, REPLY_OK, 10000):
-                #    return False
-
-                # TODO: This should be switched to _quoted!
-                data = b"AT+SAPBR=3,1,\"PWD\",\"your PASSWORD\""
-                if not self.send_check_reply(data, REPLY_OK, 10000):
+                # Set username
+                if not self.send_check_reply_quoted(b"AT+SAPBR=3,1,\"USER\",", self._apn_username, REPLY_OK, 10000):
                     return False
 
-                # open GPRS context
-                if not self.send_check_reply(b"AT+SAPBR=1,1", REPLY_OK, 100000):
-                    print("TODO: Debug")
+                # Set password
+                if not self.send_check_reply_quoted(b"AT+SAPBR=3,1,\"PWD\",", self._apn_password, REPLY_OK, 100000):
+                    return False
 
-                # bring up wireless connection
+                # Open GPRS context
+                self.send_check_reply(b"AT+SAPBR=1,1", b'', 100000)
+
+                # Bring up wireless connection
                 if not self.send_check_reply(b"AT+CIICR", REPLY_OK, 10000):
                     return False
 
             else:
-                # disconnect all sockets
+                # Disconnect all sockets
                 if not self.send_check_reply(b"AT+CIPSHUT", b"SHUT OK", 20000):
                     return False
                 
-                # close GPRS context
+                # Close GPRS context
                 if not self.send_check_reply(b"AT+SAPBR=0,1", REPLY_OK, 10000):
                     return False
                 if not self.send_check_reply(b"AT+CGATT=0", REPLY_OK, 10000):
