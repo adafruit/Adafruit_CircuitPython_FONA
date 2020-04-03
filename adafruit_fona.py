@@ -457,10 +457,31 @@ class FONA:
         if self._debug:
             print("HTTP Status: ", self._http_status)
             print("HTTP Data Length: ", self._data_len)
-        pass
+
+        # Read HTTP response data
+        if not self._http_read():
+            return False
+
+        return True
 
 
     ### HTTP Helpers ###
+
+    def _http_read(self):
+        """Reads response from HTTP GET."""
+        self.get_reply(b"AT+HTTPREAD")
+        print("resp: ", self._buf)
+        if not self.parse_reply(b"+HTTPREAD:", idx=0):
+            return False
+        
+        for i in range(0, self._data_len):
+            self._uart.read(self._data_len-1)
+        
+        resp = b""
+        resp = self._uart.read()
+        print(resp)
+        return True
+
 
     def _http_action(self, method, timeout=10000):
         """Perform a HTTP method action. 
