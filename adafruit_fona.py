@@ -310,6 +310,7 @@ class FONA:
     def network_status(self):
         """Returns cellular/network status"""
         if not self.send_parse_reply(b"AT+CREG?", b"+CREG: ", idx=1):
+        
             return False
         if self._buf == 0:
             # Not Registered
@@ -450,6 +451,7 @@ class FONA:
         if not self._http_action(FONA_HTTP_GET, 30000):
             return False
 
+        print("L1587")
         # L1587
         pass
 
@@ -469,12 +471,12 @@ class FONA:
 
         # parse response status and size
         self.read_line(timeout)
-        print(self._buf)
-        if not self.parse_reply(b"+HTTPACTION:", idx=1):
+        if not self.parse_reply(b"+HTTPACTION:", divider=",", idx=1):
             return False
-        # TODO: parse_reply needs to be modified like on L1552!
-        # if not self.parse_reply()
-        pass
+        status = self._buf
+        if not self.parse_reply(b"+HTTPACTION:", divider=",", idx=2):
+            return False
+        return True
 
     def _http_setup(self, url):
         """Initializes HTTP and HTTPS configuration
@@ -616,6 +618,10 @@ class FONA:
         :param str divider: Divider character.
 
         """
+        # TODO: The issue here is buff gets overwritten at the end, subsequent calls
+        # which attempt to use the buffer fail because its not the original value
+        # TOFIX: Attempt to ret. the parsed value, do NOT modify the buffer.
+
         # attempt to find reply in buffer
         p = self._buf.find(reply)
         if p == -1:
@@ -625,7 +631,13 @@ class FONA:
         p = self._buf[len(reply):]
         p = p.decode("utf-8")
 
+        print("buf: ", self._buf)
+
         p = p.split(divider)
+        
+        print("div: ", divider)
+        print("buf: ", p)
+        print("index: ", idx)
         p = p[idx]
 
         self._buf = int(p)
