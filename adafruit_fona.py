@@ -101,7 +101,7 @@ class FONA:
         self._apn_username = None
         self._apn_password = None
         self._https_redirect = set_https_redir
-        self._user_agent = "FONA"
+        self._user_agent = b"FONA"
         self._ok_reply = "OK"
 
     @property
@@ -464,11 +464,12 @@ class FONA:
 
         """
         # send request
-        if not self.send_check_reply(prefix=b"AT+HTTPACTION=", suffix=method, reply=REPLY_OK):
+        if not self.send_check_reply(prefix=b"AT+HTTPACTION=", suffix=str(method).encode(), reply=REPLY_OK):
             return False
-        
+
         # parse response status and size
         self.read_line(timeout)
+        print(self._buf)
         if not self.parse_reply(b"+HTTPACTION:", idx=1):
             return False
         # TODO: parse_reply needs to be modified like on L1552!
