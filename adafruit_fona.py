@@ -437,7 +437,7 @@ class FONA:
 
     ### HTTP (High Level Methods) ###
 
-    def http_get(self, url, status):
+    def http_get(self, url):
         """Performs a HTTP GET request.
         :param str url: Destination URL.
 
@@ -445,9 +445,9 @@ class FONA:
         # initialize HTTP/HTTPS config.
         if not self._http_setup(url):
             return False
-        
+
         # perform HTTP GET action
-        if not self._http_action(FONA_HTTP_GET, status, 30000):
+        if not self._http_action(FONA_HTTP_GET, 30000):
             return False
 
         # L1587
@@ -464,9 +464,16 @@ class FONA:
 
         """
         # send request
-        #if not self.send_check_reply(b"AT+HTTPACTION=", )
-
-        # TODO: parse response status and size.
+        if not self.send_check_reply(prefix=b"AT+HTTPACTION=", suffix=method, reply=REPLY_OK):
+            return False
+        
+        # parse response status and size
+        self.read_line(timeout)
+        if not self.parse_reply(b"+HTTPACTION:", idx=1):
+            return False
+        # TODO: parse_reply needs to be modified like on L1552!
+        # if not self.parse_reply()
+        pass
 
     def _http_setup(self, url):
         """Initializes HTTP and HTTPS configuration
@@ -480,14 +487,17 @@ class FONA:
         if not self._http_init():
             return False
         
+        print("* Setting CID...")
         # set client id
         if not self._http_para(b"CID", 1):
             return False
+        
+        print("setting UA...")
         # set user agent
         if not self._http_para(b"UA", self._user_agent):
             return False
         # set URL
-        if not self._http_para(b"URL", url):
+        if not self._http_para(b"URL", url.encode()):
             return False
         
         # set https redirect
@@ -517,33 +527,36 @@ class FONA:
         Parameters which can be set are: CID, URL,
             redirect, and useragent.
         """
-        self._http_para_start(param, True)
+        is_quoted = True
+        if hasattr(value, 'to_bytes'):
+            is_quoted = False
+            value = str(value).encode()
+
+        self._http_para_start(param, is_quoted)
         self._uart.write(value)
-        # end
-        pass
+        return self._http_para_end(is_quoted)
+
 
     def _http_para_start(self, param, quoted=False):
         self._uart.reset_input_buffer()
 
         if self._debug:
-            print("\t---> ")
-            print("AT+HTTPPARA=\"", end="")
-            print(param, end="")
-            print('"')
+            print("\t---> AT+HTTPPARA={}".format(param))
+
         self._uart.write(b"AT+HTTPPARA=\"")
+
         self._uart.write(param)
         if quoted:
             self._uart.write(b"\",\"")
         else:
             self._uart.write(b"\",")
-        self._uart.write(b"\r\n")
+
 
     def _http_para_end(self, quoted=False):
         if quoted:
             self._uart.write(b'"')
-        else:
-            self._uart.write(b"\r\n")
         self._uart.write(b"\r\n")
+        return self.expect_reply(REPLY_OK)
 
 
     def _http_terminate(self):
@@ -667,7 +680,7 @@ class FONA:
             if not self.get_reply(prefix=prefix, suffix=suffix, timeout=timeout):
                 return False
         else:
-            if not self.get_reply(send, timeout):
+            if not self.get_reply(send, timeout=timeout):
                 return False
         # validate response
         if not reply in self._buf:
