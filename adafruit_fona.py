@@ -448,20 +448,24 @@ class FONA:
             return False
 
         # perform HTTP GET action
-        if not self._http_action(FONA_HTTP_GET, 30000):
+        status = 0
+        data_len = 0
+        if not self._http_action(FONA_HTTP_GET, status, data_len, 30000):
             return False
 
-        print("L1587")
-        # L1587
+        if self._debug:
+            print("HTTP Status: ", stauts)
+            print("HTTP Data Length: ", data_len)
         pass
 
 
     ### HTTP Helpers ###
 
-    def _http_action(self, method, status, timeout=10000):
+    def _http_action(self, method, status, data_len, timeout=10000):
         """Perform a HTTP method action. 
         :param int method: FONA_HTTP_ method to perform.
-        :param int status: TODO
+        :param int status: HTTP Status
+        :param int data_len: Length of HTTP data.
         :param int timeout: Time to wait for response, in milliseconds.
 
         """
@@ -471,9 +475,12 @@ class FONA:
 
         # parse response status and size
         self.read_line(timeout)
+        resp = self._buf
         if not self.parse_reply(b"+HTTPACTION:", divider=",", idx=1):
             return False
         status = self._buf
+
+        self._buf = resp
         if not self.parse_reply(b"+HTTPACTION:", divider=",", idx=2):
             return False
         return True
@@ -490,12 +497,10 @@ class FONA:
         if not self._http_init():
             return False
         
-        print("* Setting CID...")
         # set client id
         if not self._http_para(b"CID", 1):
             return False
         
-        print("setting UA...")
         # set user agent
         if not self._http_para(b"UA", self._user_agent):
             return False
@@ -618,10 +623,6 @@ class FONA:
         :param str divider: Divider character.
 
         """
-        # TODO: The issue here is buff gets overwritten at the end, subsequent calls
-        # which attempt to use the buffer fail because its not the original value
-        # TOFIX: Attempt to ret. the parsed value, do NOT modify the buffer.
-
         # attempt to find reply in buffer
         p = self._buf.find(reply)
         if p == -1:
@@ -631,13 +632,7 @@ class FONA:
         p = self._buf[len(reply):]
         p = p.decode("utf-8")
 
-        print("buf: ", self._buf)
-
         p = p.split(divider)
-        
-        print("div: ", divider)
-        print("buf: ", p)
-        print("index: ", idx)
         p = p[idx]
 
         self._buf = int(p)
