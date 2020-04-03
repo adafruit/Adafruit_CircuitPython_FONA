@@ -97,12 +97,16 @@ class FONA:
         if not self._init_fona():
             raise RuntimeError("Unable to find FONA. Please check connections.")
 
+        # GPRS
         self._apn = None
         self._apn_username = None
         self._apn_password = None
+        # HTTP
         self._https_redirect = set_https_redir
         self._user_agent = b"FONA"
         self._ok_reply = "OK"
+        self._data_len = 0
+        self._http_status = 0
 
     @property
     def version(self):
@@ -310,7 +314,6 @@ class FONA:
     def network_status(self):
         """Returns cellular/network status"""
         if not self.send_parse_reply(b"AT+CREG?", b"+CREG: ", idx=1):
-        
             return False
         if self._buf == 0:
             # Not Registered
@@ -336,7 +339,7 @@ class FONA:
 
     @property
     def RSSI(self):
-        """Returns cellular network'sReceived Signal Strength Indicator (RSSI)."""
+        """Returns cellular network's Received Signal Strength Indicator (RSSI)."""
         if not self.send_parse_reply(b"AT+CSQ", b"+CSQ: "):
             return False
 
@@ -448,24 +451,20 @@ class FONA:
             return False
 
         # perform HTTP GET action
-        status = 0
-        data_len = 0
-        if not self._http_action(FONA_HTTP_GET, status, data_len, 30000):
+        if not self._http_action(FONA_HTTP_GET, 30000):
             return False
 
         if self._debug:
-            print("HTTP Status: ", stauts)
-            print("HTTP Data Length: ", data_len)
+            print("HTTP Status: ", self._http_status)
+            print("HTTP Data Length: ", self._data_len)
         pass
 
 
     ### HTTP Helpers ###
 
-    def _http_action(self, method, status, data_len, timeout=10000):
+    def _http_action(self, method, timeout=10000):
         """Perform a HTTP method action. 
         :param int method: FONA_HTTP_ method to perform.
-        :param int status: HTTP Status
-        :param int data_len: Length of HTTP data.
         :param int timeout: Time to wait for response, in milliseconds.
 
         """
@@ -478,11 +477,13 @@ class FONA:
         resp = self._buf
         if not self.parse_reply(b"+HTTPACTION:", divider=",", idx=1):
             return False
-        status = self._buf
+        self._http_status = self._buf
 
         self._buf = resp
         if not self.parse_reply(b"+HTTPACTION:", divider=",", idx=2):
             return False
+        self._data_len = self._buf
+
         return True
 
     def _http_setup(self, url):
