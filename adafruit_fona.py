@@ -441,9 +441,10 @@ class FONA:
 
     ### HTTP (High Level Methods) ###
 
-    def http_get(self, url):
+    def http_get(self, url, buf):
         """Performs a HTTP GET request.
         :param str url: Destination URL.
+        :param bytearray buf: Provided buffer to store HTTP GET request data.
 
         """
         # initialize HTTP/HTTPS config.
@@ -453,7 +454,6 @@ class FONA:
         # perform HTTP GET action
         if not self._http_action(FONA_HTTP_GET, 30000):
             return False
-
         if self._debug:
             print("HTTP Status: ", self._http_status)
             print("HTTP Data Length: ", self._data_len)
@@ -462,23 +462,21 @@ class FONA:
         if not self._http_read_all():
             return False
 
-        buf_read = bytearray(self._data_len)
-        self._uart.readinto(buf_read)
-        print(buf_read)
-    
+        # resize provided buffer to data_len
+        buf = bytearray(self._data_len)
+        self._uart.readinto(buf)
 
-
-        return True
+        return True, buf
 
 
     ### HTTP Helpers ###
 
     def _http_read_all(self):
+        """Sends a HTTPRead command to FONA module."""
         self.get_reply(b"AT+HTTPREAD")
         if not self.parse_reply(b"+HTTPREAD:"):
             return False
         return True
-
 
     def _http_action(self, method, timeout=10000):
         """Perform a HTTP method action. 

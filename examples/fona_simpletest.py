@@ -48,7 +48,12 @@ print("GRPS ON? ", fona.GPRS)
 time.sleep(10)
 
 ## Website - HTTP ##
+data_buf = b""
 url = "wifitest.adafruit.com/testwifi/index.html"
-fona.http_get(url)
 
+# GET URL
+data_buf = fona.http_get(url, data_buf)[1]
+if not len(data_buf):
+    print("Unable to GET data.")
+print(data_buf)
 
