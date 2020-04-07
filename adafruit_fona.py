@@ -459,27 +459,24 @@ class FONA:
             print("HTTP Data Length: ", self._data_len)
 
         # Read HTTP response data
-        if not self._http_read():
+        if not self._http_read_all():
             return False
+
+        buf_read = bytearray(self._data_len)
+        self._uart.readinto(buf_read)
+        print(buf_read)
+    
+
 
         return True
 
 
     ### HTTP Helpers ###
 
-    def _http_read(self):
-        """Reads response from HTTP GET."""
+    def _http_read_all(self):
         self.get_reply(b"AT+HTTPREAD")
-        print("resp: ", self._buf)
-        if not self.parse_reply(b"+HTTPREAD:", idx=0):
+        if not self.parse_reply(b"+HTTPREAD:"):
             return False
-        
-        for i in range(0, self._data_len):
-            self._uart.read(self._data_len-1)
-        
-        resp = b""
-        resp = self._uart.read()
-        print(resp)
         return True
 
 
