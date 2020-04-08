@@ -437,6 +437,45 @@ class FONA:
 
         return True
 
+    ### TCP ###
+
+    def tcp_connect(self, server, port):
+        """Connects to TCP Server.
+        :param str server: Destination server address.
+        :param int port: Destination server port.
+
+        """
+        self._uart.reset_input_buffer()
+        if not self._send_check_reply(b"AT+CIPSHUT", reply=b"SHUT OK", timeout=20000):
+            return False 
+        
+        # single connection mode
+        if not self._send_check_reply(b"AT+CIPMUX=0", reply=REPLY_OK):
+            return False
+        
+        # enable receive data manually (7,2)
+        if not self._send_check_reply(b"AT+CIPRXGET=1", reply=REPLY_OK):
+            return False
+        
+        # Data incoming from server
+        if self._debug:
+            print("\t--->AT+CIPSTART\"TCP\",\"{}\",{}".format(server, port))
+
+        self._uart.write(b"AT+CIPSTART=\"TCP\",\"")
+        self._uart.write(server.encode());
+        self._uart.write(b"\",\"")
+        self._uart.write(str(port).encode())
+        self._uart.write(b"\"")
+        self._uart.write(b"\r\n")
+
+        if not self._expect_reply(REPLY_OK):
+            return False
+        if not self._expect_reply(b"CONNECT OK"):
+            return False
+
+        return True
+
+
     ### HTTP (High Level Methods) ###
 
     def http_get(self, url, buf):
