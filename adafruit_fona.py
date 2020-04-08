@@ -259,13 +259,11 @@ class FONA:
             if self._apn is not None:
                 # Send command AT+SAPBR=3,1,"APN","<apn value>"
                 # where <apn value> is the configured APN value.
-
                 self._send_check_reply_quoted(b"AT+SAPBR=3,1,\"APN\",", self._apn, REPLY_OK, 10000)
 
                 # send AT+CSTT,"apn","user","pass"
                 self._uart.reset_input_buffer()
 
-                # TODO: This needs to be modified to send over uart and check reply
                 self._uart.write(b"AT+CSTT=\"")
                 self._uart.write(self._apn)
 
@@ -474,12 +472,13 @@ class FONA:
     def http_post(self, url, data, buf):
         """Performs a HTTP POST request.
         :param str url: Destination URL.
-        :param str data: Data to post.
-        :param int data: Data to post.
-        :param bytearray data: Data to post.
+        :param str data: Data to POST to the URL.
+        :param int data: Data to POST to the URL.
+        :param float data: Data to POST to the URL.
         :parm bytearray: Buffer to store data returned from server.
 
         """
+
         # initialize HTTP/HTTPS config.
         if not self._http_setup(url):
             return False
@@ -488,13 +487,14 @@ class FONA:
         if not self._http_para(b"CONTENT", b"text/plain"):
             return False
 
-
         # Configure POST
+        if hasattr(data, "from_bytes") or isinstance(data, float):
+            data = str(data)
         if not self._http_data(len(data)):
             return False
 
         # Write data to UART
-        self._uart.write(data)
+        self._uart.write(data.encode())
         if not self._expect_reply(REPLY_OK):
             return False
         
