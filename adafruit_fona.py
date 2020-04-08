@@ -139,6 +139,20 @@ class FONA:
         iemi = self._buf[0:15]
         return iemi.decode("utf-8")
 
+    def pretty_ip(self, ip):
+        """Converts a bytearray IP address to a dotted-quad string for printing"""
+        return "%d.%d.%d.%d" % (ip[0], ip[1], ip[2], ip[3])
+
+    @property
+    def local_ip(self):
+        """Returns the local IP Address."""
+        if self._debug:
+            print("\t---> AT+CIFSR")
+
+        self._uart.write(b"AT+GSN\r\n")
+        self._read_line()
+        return self.pretty_ip(self._buf)
+
     def _init_fona(self):
         """Initializes FONA module."""
         # RST module
@@ -475,6 +489,11 @@ class FONA:
 
         return True
 
+    def tcp_disconnect(self):
+        """Disconnect TCP session."""
+        if not self._send_check_reply(b"AT+CIPCLOSE", reply=REPLY_OK):
+            return False
+        return True
 
     ### HTTP (High Level Methods) ###
 
