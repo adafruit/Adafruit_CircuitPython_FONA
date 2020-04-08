@@ -135,7 +135,7 @@ class FONA:
         if self._debug:
             print("\t---> ", "AT+GSN")
         self._uart.write(b"AT+GSN\r\n")
-        self.read_line(multiline=True)
+        self._read_line(multiline=True)
         iemi = self._buf[0:15]
         return iemi.decode("utf-8")
 
@@ -153,9 +153,9 @@ class FONA:
             print("Attempting to open comm with ATs")
         timeout = 7
         while timeout > 0:
-            if self.send_check_reply(CMD_AT, reply=REPLY_OK):
+            if self._send_check_reply(CMD_AT, reply=REPLY_OK):
                 break
-            if self.send_check_reply(CMD_AT, reply=REPLY_AT):
+            if self._send_check_reply(CMD_AT, reply=REPLY_AT):
                 break
             time.sleep(0.5)
             timeout -= 500
@@ -163,23 +163,23 @@ class FONA:
         if timeout <= 0:
             if self._debug:
                 print(" * Timeout: No response to AT. Last ditch attempt.")
-            self.send_check_reply(CMD_AT, reply=REPLY_OK)
+            self._send_check_reply(CMD_AT, reply=REPLY_OK)
             time.sleep(0.1)
-            self.send_check_reply(CMD_AT, reply=REPLY_OK)
+            self._send_check_reply(CMD_AT, reply=REPLY_OK)
             time.sleep(0.1)
-            self.send_check_reply(CMD_AT, reply=REPLY_OK)
+            self._send_check_reply(CMD_AT, reply=REPLY_OK)
             time.sleep(0.1)
 
         # turn off echo
-        self.send_check_reply(b"ATE0", reply=REPLY_OK)
+        self._send_check_reply(b"ATE0", reply=REPLY_OK)
         time.sleep(0.1)
 
-        if not self.send_check_reply(b"ATE0", reply=REPLY_OK):
+        if not self._send_check_reply(b"ATE0", reply=REPLY_OK):
             return False
         time.sleep(0.1)
 
         # turn on hangupitude
-        self.send_check_reply(b"AT+CVHU=0", reply=REPLY_OK)
+        self._send_check_reply(b"AT+CVHU=0", reply=REPLY_OK)
         time.sleep(0.1)
 
         self._buf = b""
@@ -188,7 +188,7 @@ class FONA:
         if self._debug:
             print("\t---> ", "ATI")
         self._uart.write(b"ATI\r\n")
-        self.read_line(multiline=True)
+        self._read_line(multiline=True)
 
         if self._buf.find(b"SIM808 R14") != -1:
             self._fona_type = FONA_808_V2
@@ -204,7 +204,7 @@ class FONA:
             if self._debug:
                 print("\t ---> AT+GMM")
             self._uart.write(b"AT+GMM\r\n")
-            self.read_line(multiline=True)
+            self._read_line(multiline=True)
             if self._debug:
                 print("\t <---", self._buf)
             
@@ -217,7 +217,7 @@ class FONA:
         """Returns module's GPRS state."""
         if self._debug:
             print("* Check GPRS State")
-        if not self.send_parse_reply(b"AT+CGATT?", b"+CGATT: ", ":"):
+        if not self._send_parse_reply(b"AT+CGATT?", b"+CGATT: ", ":"):
             return False
         return self._buf
 
@@ -245,22 +245,22 @@ class FONA:
                 print("* Enabling GPRS..")
 
             # disconnect all sockets
-            self.send_check_reply(b"AT+CIPSHUT",
+            self._send_check_reply(b"AT+CIPSHUT",
                                   reply=b"SHUT OK", timeout=20000)
 
-            if not self.send_check_reply(b"AT+CGATT=1",
+            if not self._send_check_reply(b"AT+CGATT=1",
                                          reply=REPLY_OK, timeout=10000):
                 return False
 
             # set bearer profile - access point name
-            if not self.send_check_reply(b"AT+SAPBR=3,1,\"CONTYPE\",\"GPRS\"", reply=REPLY_OK, timeout=10000):
+            if not self._send_check_reply(b"AT+SAPBR=3,1,\"CONTYPE\",\"GPRS\"", reply=REPLY_OK, timeout=10000):
                 return False
 
             if self._apn is not None:
                 # Send command AT+SAPBR=3,1,"APN","<apn value>"
                 # where <apn value> is the configured APN value.
 
-                self.send_check_reply_quoted(b"AT+SAPBR=3,1,\"APN\",", self._apn, REPLY_OK, 10000)
+                self._send_check_reply_quoted(b"AT+SAPBR=3,1,\"APN\",", self._apn, REPLY_OK, 10000)
 
                 # send AT+CSTT,"apn","user","pass"
                 self._uart.reset_input_buffer()
@@ -279,33 +279,33 @@ class FONA:
                 self._uart.write(b"\"")
                 self._uart.write(b"\r\n")
 
-                if not self.get_reply(REPLY_OK):
+                if not self._get_reply(REPLY_OK):
                     return False
 
                 # Set username
-                if not self.send_check_reply_quoted(b"AT+SAPBR=3,1,\"USER\",", self._apn_username, REPLY_OK, 10000):
+                if not self._send_check_reply_quoted(b"AT+SAPBR=3,1,\"USER\",", self._apn_username, REPLY_OK, 10000):
                     return False
 
                 # Set password
-                if not self.send_check_reply_quoted(b"AT+SAPBR=3,1,\"PWD\",", self._apn_password, REPLY_OK, 100000):
+                if not self._send_check_reply_quoted(b"AT+SAPBR=3,1,\"PWD\",", self._apn_password, REPLY_OK, 100000):
                     return False
 
                 # Open GPRS context
-                self.send_check_reply(b"AT+SAPBR=1,1", reply=b'', timeout=100000)
+                self._send_check_reply(b"AT+SAPBR=1,1", reply=b'', timeout=100000)
 
                 # Bring up wireless connection
-                if not self.send_check_reply(b"AT+CIICR", reply=REPLY_OK, timeout=10000):
+                if not self._send_check_reply(b"AT+CIICR", reply=REPLY_OK, timeout=10000):
                     return False
 
             else:
                 # Disconnect all sockets
-                if not self.send_check_reply(b"AT+CIPSHUT", reply=b"SHUT OK", timeout=20000):
+                if not self._send_check_reply(b"AT+CIPSHUT", reply=b"SHUT OK", timeout=20000):
                     return False
                 
                 # Close GPRS context
-                if not self.send_check_reply(b"AT+SAPBR=0,1", reply=REPLY_OK, timeout=10000):
+                if not self._send_check_reply(b"AT+SAPBR=0,1", reply=REPLY_OK, timeout=10000):
                     return False
-                if not self.send_check_reply(b"AT+CGATT=0", reply=REPLY_OK, timeout=10000):
+                if not self._send_check_reply(b"AT+CGATT=0", reply=REPLY_OK, timeout=10000):
                     return False
 
         return True
@@ -313,7 +313,7 @@ class FONA:
     @property
     def network_status(self):
         """Returns cellular/network status"""
-        if not self.send_parse_reply(b"AT+CREG?", b"+CREG: ", idx=1):
+        if not self._send_parse_reply(b"AT+CREG?", b"+CREG: ", idx=1):
             return False
         if self._buf == 0:
             # Not Registered
@@ -340,7 +340,7 @@ class FONA:
     @property
     def RSSI(self):
         """Returns cellular network's Received Signal Strength Indicator (RSSI)."""
-        if not self.send_parse_reply(b"AT+CSQ", b"+CSQ: "):
+        if not self._send_parse_reply(b"AT+CSQ", b"+CSQ: "):
             return False
 
         reply_num = self._buf
@@ -356,7 +356,7 @@ class FONA:
             rssi = map_range(reply_num, 2, 30, -110, -54)
 
         # read out the 'ok'
-        self.read_line()
+        self._read_line()
         return rssi
 
     @property
@@ -367,7 +367,7 @@ class FONA:
         if self._fona_type == FONA_808_V2:
             # 808 V2 uses GNS commands and doesn't have an explicit 2D/3D fix status.
             # Instead just look for a fix and if found assume it's a 3D fix.
-            self.get_reply(b"AT+CGNSINF")
+            self._get_reply(b"AT+CGNSINF")
 
             if not b"+CGNSINF: " in self._buf:
                 return False
@@ -375,7 +375,7 @@ class FONA:
             status = int(self._buf[10:11].decode("utf-8"))
             if status == 1:
                 status = 3 # assume 3D fix
-            self.read_line()
+            self._read_line()
         elif self._fona_type == FONA_3G_A or self._fona_type == FONA_3G_E:
             raise NotImplementedError("FONA 3G not currently supported by this library.")
         else:
@@ -409,32 +409,32 @@ class FONA:
 
         # check if already enabled or disabled
         if self._fona_type == FONA_808_V2:
-            if not self.send_parse_reply(b"AT+CGPSPWR?", b"+CGPSPWR: ", ":"):
+            if not self._send_parse_reply(b"AT+CGPSPWR?", b"+CGPSPWR: ", ":"):
                 return False
             else:
-                self.read_line()
-                if not self.send_parse_reply(b"AT+CGNSPWR?", b"+CGNSPWR: ", ":"):
+                self._read_line()
+                if not self._send_parse_reply(b"AT+CGNSPWR?", b"+CGNSPWR: ", ":"):
                     return False
 
         state = self._buf
 
         if gps_on and not state:
-            self.read_line()
+            self._read_line()
             if self._fona_type == FONA_808_V2:
                 # try GNS
                 print("trying GNS...")
-                if not self.send_check_reply(b"AT+CGNSPWR=1", reply=REPLY_OK):
+                if not self._send_check_reply(b"AT+CGNSPWR=1", reply=REPLY_OK):
                     return False
             else:
-                if not self.send_parse_reply(b"AT+CGPSPWR=1", reply=REPLY_OK):
+                if not self._send_parse_reply(b"AT+CGPSPWR=1", reply=REPLY_OK):
                     return False
         else:
             if self._fona_type == FONA_808_V2:
                 # try GNS
-                if not self.send_check_reply(b"AT+CGNSPWR=0", reply=REPLY_OK):
+                if not self._send_check_reply(b"AT+CGNSPWR=0", reply=REPLY_OK):
                     return False
                 else:
-                    if not self.send_check_reply(b"AT+CGPSPWR=0", reply=REPLY_OK):
+                    if not self._send_check_reply(b"AT+CGPSPWR=0", reply=REPLY_OK):
                         return False
 
         return True
@@ -495,7 +495,7 @@ class FONA:
 
         # Write data to UART
         self._uart.write(data)
-        if not self.expect_reply(REPLY_OK):
+        if not self._expect_reply(REPLY_OK):
             return False
         
         # Perform HTTP POST
@@ -518,6 +518,7 @@ class FONA:
 
         # terminate the session
         self._http_terminate()
+
         return buf
 
     ### HTTP Low-Level Helpers ###
@@ -540,12 +541,12 @@ class FONA:
         self._uart.write(str(max_time).encode())
         self._uart.write(b"\r\n")
 
-        return self.expect_reply(b"DOWNLOAD")
+        return self._expect_reply(b"DOWNLOAD")
 
     def _http_read_all(self):
         """Sends a HTTPRead command to FONA module."""
-        self.get_reply(b"AT+HTTPREAD")
-        if not self.parse_reply(b"+HTTPREAD:"):
+        self._get_reply(b"AT+HTTPREAD")
+        if not self._parse_reply(b"+HTTPREAD:"):
             return False
         return True
 
@@ -556,18 +557,18 @@ class FONA:
 
         """
         # send request
-        if not self.send_check_reply(prefix=b"AT+HTTPACTION=", suffix=str(method).encode(), reply=REPLY_OK):
+        if not self._send_check_reply(prefix=b"AT+HTTPACTION=", suffix=str(method).encode(), reply=REPLY_OK):
             return False
 
         # parse response status and size
-        self.read_line(timeout)
+        self._read_line(timeout)
         resp = self._buf
-        if not self.parse_reply(b"+HTTPACTION:", divider=",", idx=1):
+        if not self._parse_reply(b"+HTTPACTION:", divider=",", idx=1):
             return False
         self._http_status = self._buf
 
         self._buf = resp
-        if not self.parse_reply(b"+HTTPACTION:", divider=",", idx=2):
+        if not self._parse_reply(b"+HTTPACTION:", divider=",", idx=2):
             return False
         self._http_data_len = self._buf
 
@@ -592,6 +593,7 @@ class FONA:
         # set user agent
         if not self._http_para(b"UA", self._user_agent):
             return False
+
         # set URL
         if not self._http_para(b"URL", url.encode()):
             return False
@@ -612,10 +614,10 @@ class FONA:
 
         """
         if enable:
-            if not self.send_check_reply(b"AT+HTTPSSL=1", reply=REPLY_OK):
+            if not self._send_check_reply(b"AT+HTTPSSL=1", reply=REPLY_OK):
                 return False
         else:
-            if not self.send_check_reply(b"AT+HTTPSSL=0", reply=REPLY_OK):
+            if not self._send_check_reply(b"AT+HTTPSSL=0", reply=REPLY_OK):
                 return True
 
     def _http_para(self, param, value):
@@ -652,35 +654,35 @@ class FONA:
         if quoted:
             self._uart.write(b'"')
         self._uart.write(b"\r\n")
-        return self.expect_reply(REPLY_OK)
+        return self._expect_reply(REPLY_OK)
 
 
     def _http_terminate(self):
         """Terminates the HTTP session"""
-        self.send_check_reply(b"AT+HTTPTERM", reply=REPLY_OK)
+        self._send_check_reply(b"AT+HTTPTERM", reply=REPLY_OK)
 
     def _http_init(self):
         """ Initializes the HTTP service."""
-        return self.send_check_reply(b"AT+HTTPINIT", reply=REPLY_OK)
+        return self._send_check_reply(b"AT+HTTPINIT", reply=REPLY_OK)
 
 
     ### UART Reply/Response Helpers ###
 
-    def send_parse_reply(self, send_data, reply_data, divider=',', idx=0):
+    def _send_parse_reply(self, send_data, reply_data, divider=',', idx=0):
         """Sends data to FONA module, parses reply data returned.
         :param bytes send_data: Data to send to the module.
         :param bytes send_data: Data received by the FONA module.
         :param str divider: Separator
 
         """
-        self.get_reply(send_data)
+        self._get_reply(send_data)
 
-        if not self.parse_reply(reply_data, divider, idx):
+        if not self._parse_reply(reply_data, divider, idx):
             return False
         return True
 
 
-    def get_reply(self, data=None, prefix=None, suffix=None, timeout=FONA_DEFAULT_TIMEOUT_MS):
+    def _get_reply(self, data=None, prefix=None, suffix=None, timeout=FONA_DEFAULT_TIMEOUT_MS):
         """Send data to FONA, read response into buffer.
         :param bytes data: Data to send to FONA module.
         :param int timeout: Time to wait for UART response.
@@ -698,14 +700,14 @@ class FONA:
             self._uart.write(prefix+suffix+b"\r\n")
 
         self._buf = b""
-        line = self.read_line(timeout)
+        line = self._read_line(timeout)
 
         if self._debug:
             print("\t<--- ", self._buf)
         return line
 
 
-    def parse_reply(self, reply, divider=",", idx=0):
+    def _parse_reply(self, reply, divider=",", idx=0):
         """Attempts to find reply in UART buffer, reads up to divider.
         :param bytes reply: Expected response from FONA module.
         :param str divider: Divider character.
@@ -727,7 +729,7 @@ class FONA:
 
         return True
 
-    def read_line(self, timeout=FONA_DEFAULT_TIMEOUT_MS, multiline=False):
+    def _read_line(self, timeout=FONA_DEFAULT_TIMEOUT_MS, multiline=False):
         """Reads one or multiple lines into the buffer.
         :param int timeout: Time to wait for UART serial to reply, in seconds.
         :param bool multiline: Read multiple lines.
@@ -766,17 +768,17 @@ class FONA:
         return reply_idx
 
 
-    def send_check_reply(self, send=None, prefix=None, suffix=None, reply=None, timeout=FONA_DEFAULT_TIMEOUT_MS):
+    def _send_check_reply(self, send=None, prefix=None, suffix=None, reply=None, timeout=FONA_DEFAULT_TIMEOUT_MS):
         """Sends data to FONA, validates response.
         :param bytes send: Command.
         :param bytes reply: Expected response from module.
 
         """
         if send is None:
-            if not self.get_reply(prefix=prefix, suffix=suffix, timeout=timeout):
+            if not self._get_reply(prefix=prefix, suffix=suffix, timeout=timeout):
                 return False
         else:
-            if not self.get_reply(send, timeout=timeout):
+            if not self._get_reply(send, timeout=timeout):
                 return False
         # validate response
         if not reply in self._buf:
@@ -785,7 +787,7 @@ class FONA:
         return True
 
 
-    def send_check_reply_quoted(self, prefix, suffix, reply, timeout=FONA_DEFAULT_TIMEOUT_MS):
+    def _send_check_reply_quoted(self, prefix, suffix, reply, timeout=FONA_DEFAULT_TIMEOUT_MS):
         """Send prefix, ", suffix, ", and a newline. Verify response against reply.
         :param bytes prefix: Command prefix.
         :param bytes prefix: Command ", suffix, ".
@@ -826,20 +828,19 @@ class FONA:
         self._uart.write(b"\"")
         self._uart.write(b"\r\n")
 
-
-        line = self.read_line(timeout)
+        line = self._read_line(timeout)
 
         if self._debug:
             print("\t<--- ", self._buf)
 
         return line
 
-    def expect_reply(self, reply, timeout=10000):
+    def _expect_reply(self, reply, timeout=10000):
         """Reads line from FONA module and compares to reply from FONA module.
         :param bytes reply: Expected reply from module.
 
         """
-        self.read_line(timeout)
+        self._read_line(timeout)
         if self._debug:
             print("\t<--- ", self._buf)
         if reply not in self._buf:
