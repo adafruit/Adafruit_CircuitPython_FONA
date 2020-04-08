@@ -105,7 +105,7 @@ class FONA:
         self._https_redirect = set_https_redir
         self._user_agent = b"FONA"
         self._ok_reply = "OK"
-        self._data_len = 0
+        self._http_data_len = 0
         self._http_status = 0
 
     @property
@@ -456,20 +456,91 @@ class FONA:
             return False
         if self._debug:
             print("HTTP Status: ", self._http_status)
-            print("HTTP Data Length: ", self._data_len)
+            print("HTTP Data Length: ", self._http_data_len)
 
         # Read HTTP response data
         if not self._http_read_all():
             return False
 
-        # resize provided buffer to data_len
-        buf = bytearray(self._data_len)
+        # resize buffer to data_len
+        buf = bytearray(self._http_data_len)
+        # and read data into the buffer
         self._uart.readinto(buf)
 
-        return True, buf
+        # terminate the session
+        self._http_terminate()
+        return buf
+
+    def http_post(self, url, data, buf):
+        """Performs a HTTP POST request.
+        :param str url: Destination URL.
+        :param str data: Data to post.
+        :param int data: Data to post.
+        :param bytearray data: Data to post.
+        :parm bytearray: Buffer to store data returned from server.
+
+        """
+        # initialize HTTP/HTTPS config.
+        if not self._http_setup(url):
+            return False
+
+        # set CONTENT param.
+        if not self._http_para(b"CONTENT", b"text/plain"):
+            return False
 
 
-    ### HTTP Helpers ###
+        # Configure POST
+        if not self._http_data(len(data)):
+            return False
+
+        # Write data to UART
+        self._uart.write(data)
+        if not self.expect_reply(REPLY_OK):
+            return False
+        
+        # Perform HTTP POST
+        if not self._http_action(FONA_HTTP_POST):
+            return False
+
+        if self._debug:
+            print("Status: ", self._http_status)
+            print("Length: ", self._http_data_len)
+        
+        # Check bytes in buffer
+        if not self._http_read_all():
+            return False
+
+
+        # resize buffer to data_len
+        buf = bytearray(self._http_data_len)
+        # and read data into the buffer
+        self._uart.readinto(buf)
+
+        # terminate the session
+        self._http_terminate()
+        return buf
+
+    ### HTTP Low-Level Helpers ###
+
+    def _http_data(self, size, max_time=10000):
+        """POST the data with size and max_time latency.
+        :param int size: Data size, in bytes.
+        :param int max_time: Latency, recommended as long enough to
+                             allow downloading all the data.
+
+        """
+        self._uart.reset_input_buffer()
+
+        if self._debug:
+            print("\t--->AT+HTTPDATA={},{}".format(size, max_time))
+
+        self._uart.write(b"AT+HTTPDATA=")
+        self._uart.write(str(size).encode())
+        self._uart.write(b",")
+        self._uart.write(str(max_time).encode())
+        self._uart.write(b"\r\n")
+
+        return self.expect_reply(b"DOWNLOAD")
 
     def _http_read_all(self):
         """Sends a HTTPRead command to FONA module."""
@@ -498,7 +569,7 @@ class FONA:
         self._buf = resp
         if not self.parse_reply(b"+HTTPACTION:", divider=",", idx=2):
             return False
-        self._data_len = self._buf
+        self._http_data_len = self._buf
 
         return True
 
@@ -763,7 +834,7 @@ class FONA:
 
         return line
 
-    def expect_reply(self, reply, timeout=FONA_DEFAULT_TIMEOUT_MS):
+    def expect_reply(self, reply, timeout=10000):
         """Reads line from FONA module and compares to reply from FONA module.
         :param bytes reply: Expected reply from module.
 
@@ -772,6 +843,7 @@ class FONA:
         if self._debug:
             print("\t<--- ", self._buf)
         if reply not in self._buf:
+            print("not in buffer!")
             return False
         return True
 
