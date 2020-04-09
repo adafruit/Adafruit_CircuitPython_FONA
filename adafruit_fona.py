@@ -535,7 +535,7 @@ class FONA:
             # promoting '>' mark not found
             return False
         
-        self._uart.write(data)
+        self._uart.write(data.encode())
         self._uart.write(b"\r\n")
         self._read_line(3000)
 
