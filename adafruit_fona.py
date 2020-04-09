@@ -453,6 +453,20 @@ class FONA:
 
     ### TCP ###
 
+    @property
+    def tcp_status(self):
+        """Returns if TCP is connected."""
+        if not self._send_check_reply(b"AT+CIPSTATUS", reply=REPLY_OK, timeout=100):
+            return False
+        self._read_line(100)
+        
+        if self._debug:
+            print("\t<--- ", self._buf)
+        
+        if not "STATE: CONNECT OK" in self._buf.decode():
+            return False
+        return True
+
     def tcp_connect(self, server, port):
         """Connects to TCP Server.
         :param str server: Destination server address.
@@ -490,22 +504,45 @@ class FONA:
         return True
 
     def tcp_disconnect(self):
-        """Disconnect TCP session."""
+        """Disconnect from remote server."""
         if not self._send_check_reply(b"AT+CIPCLOSE", reply=REPLY_OK):
             return False
         return True
 
-    @property
-    def tcp_status(self):
-        """Returns TCP state"""
-        if not self._send_check_reply(b"AT+CIPSTATUS", reply=REPLY_OK, timeout=100):
-            return False
-        self._read_line(100)
+    def tcp_send(self, data):
+        """Send data to remote server.
+        :param str data: Data to POST to the URL.
+        :param int data: Data to POST to the URL.
+        :param float data: Data to POST to the URL.
+
+        """
+        if hasattr(data, "from_bytes") or isinstance(data, float):
+            data = str(data)
+
+        if self._debug:
+            print("\t--->AT+CIPSEND=", len(data))
+            print("\t--->", data)
         
+        self._uart.write(b"AT+CIPSEND=")
+        self._uart.write(str(len(data)).encode())
+        self._uart.write(b"\r\n")
+        self._read_line()
+
+        if self._debug:
+            print("\t<--- ", self._buf)
+
+        if self._buf[0] != 62:
+            # promoting '>' mark not found
+            return False
+        
+        self._uart.write(data)
+        self._uart.write(b"\r\n")
+        self._read_line(3000)
+
         if self._debug:
             print("\t<--- ", self._buf)
         
-        if not "STATE: CONNECT OK" in self._buf.decode():
+        if not "SEND OK" in self._buf.decode():
             return False
         return True
 
