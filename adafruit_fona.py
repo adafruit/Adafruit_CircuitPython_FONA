@@ -526,17 +526,14 @@ class FONA:
         :param float data: Data to POST to the URL.
 
         """
+
         if hasattr(data, "from_bytes") or isinstance(data, float):
-            data = str(data)
-        
-        if len(data) > self._max_tcp_send_len:
-            #  Maximum data length is 1460 bytes
-            raise MemoryError("Maximum data length exceeded.")
+            data = str(data).encode()
 
         if self._debug:
             print("\t--->AT+CIPSEND=", len(data))
             print("\t--->", data)
-        
+
         self._uart.write(b"AT+CIPSEND=")
         self._uart.write(str(len(data)).encode())
         self._uart.write(b"\r\n")
@@ -548,8 +545,8 @@ class FONA:
         if self._buf[0] != 62:
             # promoting '>' mark not found
             return False
-        
-        self._uart.write(data.encode())
+
+        self._uart.write(data)
         self._uart.write(b"\r\n")
         self._read_line(3000)
 
