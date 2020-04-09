@@ -509,6 +509,16 @@ class FONA:
             return False
         return True
 
+    @property
+    def _max_tcp_send_len(self):
+        """Returns maximum data length avaliable to be sent, as determined by
+        the network.
+
+        """
+        if not self._send_parse_reply(b"AT+CIPSEND?", b"+CIPSEND: ", ":"):
+            return False
+        return self._buf
+
     def tcp_send(self, data):
         """Send data to remote server.
         :param str data: Data to POST to the URL.
@@ -518,6 +528,10 @@ class FONA:
         """
         if hasattr(data, "from_bytes") or isinstance(data, float):
             data = str(data)
+        
+        if len(data) > self._max_tcp_send_len:
+            #  Maximum data length is 1460 bytes
+            raise MemoryError("Maximum data length exceeded.")
 
         if self._debug:
             print("\t--->AT+CIPSEND=", len(data))
@@ -953,7 +967,6 @@ class FONA:
         if self._debug:
             print("\t<--- ", self._buf)
         if reply not in self._buf:
-            print("not in buffer!")
             return False
         return True
 
