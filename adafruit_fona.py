@@ -459,9 +459,6 @@ class FONA:
         :param str hostname: Destination server.
 
         """
-        #self._buf = b""
-        #self._uart.reset_input_buffer()
-
         if self._debug:
             print("*** get_host_by_name")
         if isinstance(hostname, str):
