@@ -509,16 +509,6 @@ class FONA:
             return False
         return True
 
-    @property
-    def _max_tcp_send_len(self):
-        """Returns maximum data length avaliable to be sent, as determined by
-        the network.
-
-        """
-        if not self._send_parse_reply(b"AT+CIPSEND?", b"+CIPSEND: ", ":"):
-            return False
-        return self._buf
-
     def tcp_send(self, data):
         """Send data to remote server.
         :param str data: Data to POST to the URL.
@@ -526,9 +516,14 @@ class FONA:
         :param float data: Data to POST to the URL.
 
         """
+        self._uart.reset_input_buffer()
 
-        if hasattr(data, "from_bytes") or isinstance(data, float):
+        # convert data -> bytes for uart
+        if hasattr(data, "encode"):
+            data = data.encode()
+        elif hasattr(data, "from_bytes") or isinstance(data, float):
             data = str(data).encode()
+
 
         if self._debug:
             print("\t--->AT+CIPSEND=", len(data))
@@ -543,7 +538,7 @@ class FONA:
             print("\t<--- ", self._buf)
 
         if self._buf[0] != 62:
-            # promoting '>' mark not found
+            # promoting mark ('>') not found
             return False
 
         self._uart.write(data)
