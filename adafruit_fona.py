@@ -495,6 +495,20 @@ class FONA:
             return False
         return True
 
+    @property
+    def tcp_status(self):
+        """Returns TCP state"""
+        if not self._send_check_reply(b"AT+CIPSTATUS", reply=REPLY_OK, timeout=100):
+            return False
+        self._read_line(100)
+        
+        if self._debug:
+            print("\t<--- ", self._buf)
+        
+        if not "STATE: CONNECT OK" in self._buf.decode():
+            return False
+        return True
+
     ### HTTP (High Level Methods) ###
 
     def http_get(self, url, buf):
