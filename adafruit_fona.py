@@ -151,7 +151,6 @@ class FONA:
 
         self._uart.write(b"AT+CIFSR\r\n")
         self._read_line()
-        print(self._buf)
         return self.pretty_ip(self._buf)
 
     def _init_fona(self):
@@ -455,28 +454,32 @@ class FONA:
         return True
 
     def get_host_by_name(self, hostname):
-        # TODO: This does not work, returns error, not sure why?
         """DNS Function - converts a hostname to a packed 4-byte IP address.
         Returns a 4 bytearray.
         :param str hostname: Destination server.
 
         """
-        self._buf = b""
-        self._uart.reset_input_buffer()
+        #self._buf = b""
+        #self._uart.reset_input_buffer()
 
         if self._debug:
             print("*** get_host_by_name")
         if isinstance(hostname, str):
             hostname = bytes(hostname, "utf-8")
 
+        self._uart.write(b"AT+CDNSGIP=\"")
+        self._uart.write(hostname)
+        self._uart.write(b"\"\r\n")
+        if not self._expect_reply(REPLY_OK):
+            return False
 
-        self._uart.write(b"AT+CDNSGIP=\"www.sim.com\"\r\n")
+        # eat the second line
         self._read_line()
-        print("buf: ", self._buf)
+        # parse the third 
         self._read_line()
-        print("buf: ", self._buf)
-        self._read_line()
-        print("buf: ", self._buf)
+
+        self._parse_reply(b"+CDNSGIP:", idx=1)
+        return self._buf
 
     ### TCP ###
 
@@ -867,7 +870,10 @@ class FONA:
         p = p.split(divider)
         p = p[idx]
 
-        self._buf = int(p)
+        try:
+            self._buf = int(p)
+        except:
+            self._buf = p
 
         return True
 
