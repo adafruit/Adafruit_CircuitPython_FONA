@@ -58,4 +58,3 @@ time.sleep(3)
 
 print("sending bytes...")
 fona.tcp_send(12345678912)
-

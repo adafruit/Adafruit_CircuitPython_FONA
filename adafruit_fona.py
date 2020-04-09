@@ -536,6 +536,16 @@ class FONA:
             return False
         return True
 
+    def tcp_read(self, buff, length):
+        """Read data from the network into a buffer.
+        :param bytes buff: Buffer to read into.
+        :param int length: Desired length to read.
+
+        """
+        AT+CIPRXGET=2,
+        self._uart.
+
+
     def tcp_send(self, data):
         """Send data to remote server.
         :param str data: Data to POST to the URL.
