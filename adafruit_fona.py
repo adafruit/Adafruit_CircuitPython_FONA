@@ -494,6 +494,15 @@ class FONA:
             return False
         return True
 
+    @property
+    def tcp_available(self):
+        if not self._send_parse_reply(b"AT+CIPRXGET=4", b"+CIPRXGET: 4,"):
+            return False
+        if self._debug:
+            print("\t {} bytes available.".format(self._buf))
+
+        return self._buf
+
     def tcp_connect(self, server, port):
         """Connects to TCP Server.
         :param str server: Destination server address.
@@ -543,8 +552,7 @@ class FONA:
         :param int length: Desired length to read.
 
         """
-        self._buf = b""
-        self._uart.reset_input_buffer()
+        self._read_line()
         if self._debug:
             print("\t ---> AT+CIPRXGET=2,{}".format(length))
         self._uart.write(b"AT+CIPRXGET=2,")
@@ -563,6 +571,7 @@ class FONA:
             print("\t {} bytes read".format(avail))
 
         buf = self._buf
+
         return buf, avail
 
     def tcp_send(self, data):
