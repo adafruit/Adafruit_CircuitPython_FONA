@@ -556,7 +556,7 @@ class FONA:
             return False
         return True
 
-    def tcp_read(self, buf, length):
+    def socket_read(self, buf, length):
         """Read data from the network into a buffer.
         Returns buffer and amount of bytes read.
         :param bytes buf: Buffer to read into.
