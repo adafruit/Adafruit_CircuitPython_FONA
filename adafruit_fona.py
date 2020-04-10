@@ -530,11 +530,11 @@ class FONA:
         # Start connection
         if conn_mode == FONA_TCP_MODE:
             if self._debug:
-                print("\t--->AT+CIPSTART\"TCP\",\"{}\",{}".format(dest, port))
+                print("\t--->AT+CIPSTART=\"TCP\",\"{}\",{}".format(dest, port))
             self._uart.write(b"AT+CIPSTART=\"TCP\",\"")
         else:
             if self._debug:
-                print("\t--->AT+CIPSTART\"UDP\",\"{}\",{}".format(dest, port))
+                print("\t--->AT+CIPSTART=\"UDP\",\"{}\",{}".format(dest, port))
             self._uart.write(b"AT+CIPSTART=\"UDP\",\"")
 
         self._uart.write(dest.encode());
@@ -584,28 +584,19 @@ class FONA:
         buf = self._buf
         return buf, avail
 
-    def tcp_send(self, data):
-        """Send data to remote server.
-        :param str data: Data to POST to the URL.
-        :param int data: Data to POST to the URL.
-        :param float data: Data to POST to the URL.
+    def socket_write(self, buffer):
+        """Writes bytes to the socket.
+        :param bytes buffer: Bytes to write to socket.
 
         """
         self._uart.reset_input_buffer()
 
-        # convert data -> bytes for uart
-        if hasattr(data, "encode"):
-            data = data.encode()
-        elif hasattr(data, "from_bytes") or isinstance(data, float):
-            data = str(data).encode()
-
-
         if self._debug:
-            print("\t--->AT+CIPSEND=", len(data))
-            print("\t--->", data)
+            print("\t--->AT+CIPSEND=", len(buffer))
+            print("\t--->", buffer)
 
         self._uart.write(b"AT+CIPSEND=")
-        self._uart.write(str(len(data)).encode())
+        self._uart.write(str(len(buffer)).encode())
         self._uart.write(b"\r\n")
         self._read_line()
 
@@ -616,7 +607,7 @@ class FONA:
             # promoting mark ('>') not found
             return False
 
-        self._uart.write(data)
+        self._uart.write(buffer)
         self._uart.write(b"\r\n")
         self._read_line(3000)
 
