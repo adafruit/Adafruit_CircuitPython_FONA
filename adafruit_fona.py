@@ -536,15 +536,34 @@ class FONA:
             return False
         return True
 
-    def tcp_read(self, buff, length):
+    def tcp_read(self, buf, length):
         """Read data from the network into a buffer.
-        :param bytes buff: Buffer to read into.
+        Returns buffer and amount of bytes read.
+        :param bytes buf: Buffer to read into.
         :param int length: Desired length to read.
 
         """
-        AT+CIPRXGET=2,
-        self._uart.
+        self._buf = b""
+        self._uart.reset_input_buffer()
+        if self._debug:
+            print("\t ---> AT+CIPRXGET=2,{}".format(length))
+        self._uart.write(b"AT+CIPRXGET=2,")
+        self._uart.write(str(length).encode())
+        self._uart.write(b"\r\n")
 
+        self._read_line()
+        if not self._parse_reply(b"+CIPRXGET: 2,"):
+            return False
+        avail = self._buf
+
+        # read into buffer
+        self._read_line()
+
+        if self._debug:
+            print("\t {} bytes read".format(avail))
+
+        buf = self._buf
+        return buf, avail
 
     def tcp_send(self, data):
         """Send data to remote server.
@@ -876,6 +895,7 @@ class FONA:
 
         p = p.split(divider)
         p = p[idx]
+
 
         try:
             self._buf = int(p)
