@@ -77,6 +77,9 @@ FONA_HTTP_GET = const(0x00)
 FONA_HTTP_POST = const(0x01)
 FONA_HTTP_HEAD = const(0x02)
 
+FONA_TCP_MODE = const(0)
+FONA_UDP_MODE = const(1)
+
 class FONA:
     """CircuitPython FONA module interface.
     :param ~digialio TX: FONA TX Pin
@@ -478,7 +481,7 @@ class FONA:
         self._parse_reply(b"+CDNSGIP:", idx=1)
         return self._buf
 
-    ### TCP ###
+    ### TCP & UDP ###
 
     @property
     def tcp_status(self):
@@ -503,10 +506,12 @@ class FONA:
 
         return self._buf
 
-    def tcp_connect(self, server, port):
-        """Connects to TCP Server.
-        :param str server: Destination server address.
-        :param int port: Destination server port.
+    def socket_connect(self, dest, port, conn_mode=FONA_TCP_MODE):
+        """Connects to a destination IP address or hostname.
+        By default, we use `conn_mode` FONA_TCP_MODE but we may also
+        use FONA_UDP_MODE.
+        :param str dest: Destination dest address.
+        :param int port: Destination dest port.
 
         """
         self._uart.reset_input_buffer()
@@ -521,12 +526,17 @@ class FONA:
         if not self._send_check_reply(b"AT+CIPRXGET=1", reply=REPLY_OK):
             return False
         
-        # Data incoming from server
-        if self._debug:
-            print("\t--->AT+CIPSTART\"TCP\",\"{}\",{}".format(server, port))
+        # Start connection
+        if conn_mode == FONA_TCP_MODE:
+            if self._debug:
+                print("\t--->AT+CIPSTART\"TCP\",\"{}\",{}".format(dest, port))
+            self._uart.write(b"AT+CIPSTART=\"TCP\",\"")
+        else:
+            if self._debug:
+                print("\t--->AT+CIPSTART\"UDP\",\"{}\",{}".format(dest, port))
+            self._uart.write(b"AT+CIPSTART=\"UDP\",\"")
 
-        self._uart.write(b"AT+CIPSTART=\"TCP\",\"")
-        self._uart.write(server.encode());
+        self._uart.write(dest.encode());
         self._uart.write(b"\",\"")
         self._uart.write(str(port).encode())
         self._uart.write(b"\"")
@@ -571,7 +581,6 @@ class FONA:
             print("\t {} bytes read".format(avail))
 
         buf = self._buf
-
         return buf, avail
 
     def tcp_send(self, data):
