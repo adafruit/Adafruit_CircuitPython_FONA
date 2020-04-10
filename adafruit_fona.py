@@ -481,11 +481,11 @@ class FONA:
         self._parse_reply(b"+CDNSGIP:", idx=1)
         return self._buf
 
-    ### TCP & UDP ###
+    ### Socket API (TCP, UDP) ###
 
     @property
-    def tcp_status(self):
-        """Returns if TCP is connected."""
+    def socket_status(self):
+        """Returns if socket is connected."""
         if not self._send_check_reply(b"AT+CIPSTATUS", reply=REPLY_OK, timeout=100):
             return False
         self._read_line(100)
@@ -498,7 +498,8 @@ class FONA:
         return True
 
     @property
-    def tcp_available(self):
+    def socket_available(self):
+        """Returns the amount of bytes to be read from the socket."""
         if not self._send_parse_reply(b"AT+CIPRXGET=4", b"+CIPRXGET: 4,"):
             return False
         if self._debug:
@@ -549,8 +550,8 @@ class FONA:
 
         return True
 
-    def tcp_disconnect(self):
-        """Disconnect from remote server."""
+    def socket_close(self):
+        """Closes UDP or TCP connection."""
         if not self._send_check_reply(b"AT+CIPCLOSE", reply=REPLY_OK):
             return False
         return True
