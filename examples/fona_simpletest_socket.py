@@ -37,24 +37,22 @@ time.sleep(6)
 
 print('IP: ', fona.local_ip)
 
-host_ip = fona.get_host_by_name("www.sim.com")
-print("Host IP: ", host_ip)
-
-
-## TCP ### 
-server = "IP_ADDR"
+## SOCKET IFACE ### 
+server = "SERVER_IP"
 port = 80
 
 print("Connecting...")
-if not fona.tcp_connect(server, port):
-    raise RuntimeError("Unable to connect to TCP Server")
+if not fona.socket_connect(server, port):
+    raise RuntimeError("Unable to connect to server")
 print("Connected to {}:{}".format(server, port))
 
 time.sleep(3)
 
-print("Status: ", fona.tcp_status)
-
-time.sleep(3)
-
-print("sending bytes...")
-fona.tcp_send(12345678912)
+while True:
+    data = b""
+    avail = fona.socket_available
+    if avail > 0:
+        print("Reading...")
+        data = fona.socket_read(data, avail)[0]
+        print("read: ", data)
+    time.sleep(3)
