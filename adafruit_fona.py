@@ -510,10 +510,12 @@ class FONA:
             return False
         return True
 
-    @property
-    def socket_available(self):
-        """Returns the amount of bytes to be read from the socket."""
-        if not self._send_parse_reply(b"AT+CIPRXGET=4, 1", b"+CIPRXGET: 4,"):
+    def socket_available(self, socket_num):
+        """Returns the amount of bytes to be read from the socket.
+        :param int socket_num: Desired socket to return bytes available from.
+
+        """
+        if not self._send_parse_reply(b"AT+CIPRXGET=4,"+str(socket_num).encode(), b"+CIPRXGET: 4,"+ str(socket_num).encode()+b","):
             return False
         if self._debug:
             print("\t {} bytes available.".format(self._buf))
@@ -558,15 +560,17 @@ class FONA:
         if not self._expect_reply(REPLY_OK):
             return False
 
-        # TODO: parse out the 1
         if not self._expect_reply(b"CONNECT OK"):
             return False
 
         return True
 
-    def socket_close(self):
-        """Closes UDP or TCP connection."""
-        if not self._send_check_reply(b"AT+CIPCLOSE", reply=REPLY_OK):
+    def socket_close(self, sock_num):
+        """Closes UDP or TCP connection.
+        :param int sock_num: Desired socket number.
+
+        """
+        if not self._send_check_reply(b"AT+CIPCLOSE" + str(sock_num).encode(), reply=REPLY_OK):
             return False
         return True
 
