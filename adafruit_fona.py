@@ -80,6 +80,8 @@ FONA_HTTP_HEAD = const(0x02)
 FONA_TCP_MODE = const(0)
 FONA_UDP_MODE = const(1)
 
+FONA_MAX_SOCKETS = const(6)
+
 class FONA:
     """CircuitPython FONA module interface.
     :param ~digialio TX: FONA TX Pin
@@ -260,6 +262,14 @@ class FONA:
         if gprs_on:
             if self._debug:
                 print("* Enabling GPRS..")
+
+            # enable multi connection mode (3,1)
+            if not self._send_check_reply(b"AT+CIPMUX=1", reply=REPLY_OK):
+                return False
+
+            # enable receive data manually (7,2)
+            if not self._send_check_reply(b"AT+CIPRXGET=1", reply=REPLY_OK):
+                return False
 
             # disconnect all sockets
             self._send_check_reply(b"AT+CIPSHUT",
@@ -500,38 +510,34 @@ class FONA:
     @property
     def socket_available(self):
         """Returns the amount of bytes to be read from the socket."""
-        if not self._send_parse_reply(b"AT+CIPRXGET=4", b"+CIPRXGET: 4,"):
+        if not self._send_parse_reply(b"AT+CIPRXGET=4, 1", b"+CIPRXGET: 4,"):
             return False
         if self._debug:
             print("\t {} bytes available.".format(self._buf))
 
         return self._buf
 
-    def socket_connect(self, dest, port, conn_mode=FONA_TCP_MODE):
+    def socket_connect(self, sock_num, dest, port, conn_mode=FONA_TCP_MODE):
         """Connects to a destination IP address or hostname.
         By default, we use `conn_mode` FONA_TCP_MODE but we may also
         use FONA_UDP_MODE.
+        :param int sock_num: Desired socket number
         :param str dest: Destination dest address.
         :param int port: Destination dest port.
 
         """
         self._uart.reset_input_buffer()
-        if not self._send_check_reply(b"AT+CIPSHUT", reply=b"SHUT OK", timeout=20000):
-            return False 
-        
-        # single connection mode
-        if not self._send_check_reply(b"AT+CIPMUX=0", reply=REPLY_OK):
-            return False
-        
-        # enable receive data manually (7,2)
-        if not self._send_check_reply(b"AT+CIPRXGET=1", reply=REPLY_OK):
-            return False
-        
+        assert sock_num < FONA_MAX_SOCKETS, "sock_num exceeds maximum number of sockets supported by FONA."
+
         # Start connection
+        # TODO: make configurable, set in init!
         if conn_mode == FONA_TCP_MODE:
             if self._debug:
                 print("\t--->AT+CIPSTART=\"TCP\",\"{}\",{}".format(dest, port))
-            self._uart.write(b"AT+CIPSTART=\"TCP\",\"")
+            #self._uart.write(b"AT+CIPSTART=1,\"TCP\",\"")
+            self._uart.write(b"AT+CIPSTART=")
+            self._uart.write(str(sock_num).encode())
+            self._uart.write(b",\"TCP\",\"")
         else:
             if self._debug:
                 print("\t--->AT+CIPSTART=\"UDP\",\"{}\",{}".format(dest, port))
@@ -545,6 +551,8 @@ class FONA:
 
         if not self._expect_reply(REPLY_OK):
             return False
+
+        # TODO: parse out the 1
         if not self._expect_reply(b"CONNECT OK"):
             return False
 
