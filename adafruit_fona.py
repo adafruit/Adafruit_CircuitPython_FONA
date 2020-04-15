@@ -493,10 +493,13 @@ class FONA:
 
     ### Socket API (TCP, UDP) ###
 
-    @property
-    def socket_status(self):
-        """Returns if socket is connected."""
-        if not self._send_check_reply(b"AT+CIPSTATUS", reply=REPLY_OK, timeout=100):
+    def socket_status(self, socket_num):
+        """Returns if socket is connected.
+        :param int socket_num: Desired socket number.
+
+        """
+        if not self._send_check_reply(b"AT+CIPSTATUS=" + str(socket_num).encode(),
+                                      reply=REPLY_OK, timeout=100):
             return False
         self._read_line(100)
         
@@ -529,20 +532,23 @@ class FONA:
         self._uart.reset_input_buffer()
         assert sock_num < FONA_MAX_SOCKETS, "sock_num exceeds maximum number of sockets supported by FONA."
 
+        if self._debug:
+            print(
+                "* FONA socket connect, socket={}, protocol={}, port={}, ip={}".format(
+                    sock_num, conn_mode, port, dest)
+            )
+
         # Start connection
-        # TODO: make configurable, set in init!
+        self._uart.write(b"AT+CIPSTART=")
+        self._uart.write(str(sock_num).encode())
         if conn_mode == FONA_TCP_MODE:
             if self._debug:
                 print("\t--->AT+CIPSTART=\"TCP\",\"{}\",{}".format(dest, port))
-            #self._uart.write(b"AT+CIPSTART=1,\"TCP\",\"")
-            self._uart.write(b"AT+CIPSTART=")
-            self._uart.write(str(sock_num).encode())
             self._uart.write(b",\"TCP\",\"")
         else:
             if self._debug:
                 print("\t--->AT+CIPSTART=\"UDP\",\"{}\",{}".format(dest, port))
-            self._uart.write(b"AT+CIPSTART=\"UDP\",\"")
-
+                self._uart.write(b",\"UDP\",\"")
         self._uart.write(dest.encode());
         self._uart.write(b"\",\"")
         self._uart.write(str(port).encode())
