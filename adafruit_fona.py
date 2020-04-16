@@ -52,36 +52,37 @@ from simpleio import map_range
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_FONA.git"
 
+
+# pylint: disable=bad-whitespace
 FONA_BAUD = const(4800)
-FONA_DEFAULT_TIMEOUT_MS = 500
+FONA_DEFAULT_TIMEOUT_MS = 500 # TODO: Check this against arduino...
 
 # COMMANDS
-CMD_AT = b"AT"
-
+CMD_AT   = b"AT"
 # REPLIES
 REPLY_OK = b"OK"
 REPLY_AT = b"AT"
 
 # FONA Versions
-FONA_800_L = const(0x01)
-FONA_800_H = const(0x6)
-
+FONA_800_L  = const(0x01)
+FONA_800_H  = const(0x6)
 FONA_808_V1 = const(0x2)
 FONA_808_V2 = const(0x3)
-
 FONA_3G_A   = const(0x4)
 FONA_3G_E   = const(0x5)
 
 # HTTP Actions
-FONA_HTTP_GET = const(0x00)
+FONA_HTTP_GET  = const(0x00)
 FONA_HTTP_POST = const(0x01)
 FONA_HTTP_HEAD = const(0x02)
 
-FONA_TCP_MODE = const(0)
-FONA_UDP_MODE = const(1)
-
+# TCP/IP
+FONA_TCP_MODE    = const(0)
+FONA_UDP_MODE    = const(1)
 FONA_MAX_SOCKETS = const(6)
+# pylint: enable=bad-whitespace
 
+# pylint: disable=too-many-instance-attributes
 class FONA:
     """CircuitPython FONA module interface.
     :param ~digialio TX: FONA TX Pin
@@ -92,6 +93,7 @@ class FONA:
     :param bool debug: Enable debugging output.
 
     """
+    # pylint: disable=too-many-arguments
     def __init__(self, tx, rx, rst, set_https_redir=False, debug=False):
         self._buf = b""
         self._fona_type = 0
@@ -114,25 +116,25 @@ class FONA:
         self._http_status = 0
 
     @property
+    # pylint: disable=too-many-return-statements
     def version(self):
         """Returns FONA Version,as a string."""
         if self._fona_type == FONA_800_L:
             return "FONA 800L"
-        elif self._fona_type == FONA_800_H:
+        if self._fona_type == FONA_800_H:
             return "FONA 800H"
-        elif self._fona_type == FONA_808_V1:
+        if self._fona_type == FONA_808_V1:
             return "FONA 808 (v1)"
-        elif self._fona_type == FONA_808_V2:
+        if self._fona_type == FONA_808_V2:
             return "FONA 808 (v2)"
-        elif self._fona_type == FONA_3G_A:
+        if self._fona_type == FONA_3G_A:
             return "FONA 3G (US)"
-        elif self._fona_type == FONA_3G_E:
+        if self._fona_type == FONA_3G_E:
             return "FONA 3G (EU)"
-        else:
-            return -1
+        return -1
 
     @property
-    def IEMI(self):
+    def iemi(self):
         """Returns FONA module's IEMI number."""
         self._buf = b""
         self._uart.reset_input_buffer()
@@ -144,7 +146,7 @@ class FONA:
         iemi = self._buf[0:15]
         return iemi.decode("utf-8")
 
-    def pretty_ip(self, ip):
+    def pretty_ip(self, ip):  # pylint: disable=no-self-use, invalid-name
         """Converts a bytearray IP address to a dotted-quad string for printing"""
         return "%d.%d.%d.%d" % (ip[0], ip[1], ip[2], ip[3])
 
@@ -158,6 +160,7 @@ class FONA:
         self._read_line()
         return self.pretty_ip(self._buf)
 
+    # pylint: disable=too-many-branches, too-many-statements
     def _init_fona(self):
         """Initializes FONA module."""
         # RST module
@@ -226,13 +229,13 @@ class FONA:
             self._read_line(multiline=True)
             if self._debug:
                 print("\t <---", self._buf)
-            
+
             if self._buf.find(b"SIM800H") != -1:
                 self._fona_type = FONA_800_H
         return True
 
     @property
-    def GPRS(self):
+    def gprs(self):
         """Returns module's GPRS state."""
         if self._debug:
             print("* Check GPRS State")
@@ -240,7 +243,7 @@ class FONA:
             return False
         return self._buf
 
-    def set_GRPS(self, config):
+    def set_gprs(self, config):
         """If config provided, sets GPRS configuration to provided tuple in format:
         (apn_network, apn_username, apn_password)
 
@@ -253,8 +256,9 @@ class FONA:
         self._apn_password = password.encode()
         return self._apn, self._apn_username, self._apn_password
 
-    @GPRS.setter
-    def GPRS(self, gprs_on=True):
+    # pylint: disable=too-many-return-statements
+    @gprs.setter
+    def gprs(self, gprs_on=True):
         """Enables or disables GPRS configuration.
         :param bool gprs_on: Turns on GPRS, enabled by default.
 
@@ -279,8 +283,9 @@ class FONA:
                                          reply=REPLY_OK, timeout=10000):
                 return False
 
-            # set bearer profile - access point name
-            if not self._send_check_reply(b"AT+SAPBR=3,1,\"CONTYPE\",\"GPRS\"", reply=REPLY_OK, timeout=10000):
+            # set bearer profile (APN)
+            if not self._send_check_reply(b"AT+SAPBR=3,1,\"CONTYPE\",\"GPRS\"",
+                                          reply=REPLY_OK, timeout=10000):
                 return False
 
             if self._apn is not None:
@@ -310,11 +315,13 @@ class FONA:
                     return False
 
                 # Set username
-                if not self._send_check_reply_quoted(b"AT+SAPBR=3,1,\"USER\",", self._apn_username, REPLY_OK, 10000):
+                if not self._send_check_reply_quoted(b"AT+SAPBR=3,1,\"USER\",",
+                                                     self._apn_username, REPLY_OK, 10000):
                     return False
 
                 # Set password
-                if not self._send_check_reply_quoted(b"AT+SAPBR=3,1,\"PWD\",", self._apn_password, REPLY_OK, 100000):
+                if not self._send_check_reply_quoted(b"AT+SAPBR=3,1,\"PWD\",",
+                                                     self._apn_password, REPLY_OK, 100000):
                     return False
 
                 # Open GPRS context
@@ -328,7 +335,7 @@ class FONA:
                 # Disconnect all sockets
                 if not self._send_check_reply(b"AT+CIPSHUT", reply=b"SHUT OK", timeout=20000):
                     return False
-                
+
                 # Close GPRS context
                 if not self._send_check_reply(b"AT+SAPBR=0,1", reply=REPLY_OK, timeout=10000):
                     return False
@@ -345,27 +352,26 @@ class FONA:
         if self._buf == 0:
             # Not Registered
             return self._buf
-        elif self._buf == 1:
+        if self._buf == 1:
             # Registered (home)
             return self._buf
-        elif self._buf == 2:
+        if self._buf == 2:
             # Not Registered (searching)
             return self._buf
-        elif self._buf == 3:
+        if self._buf == 3:
             # Denied
             return self._buf
-        elif self._buf == 4:
+        if self._buf == 4:
             # Unknown
             return self._buf
-        elif self._buf == 5:
+        if self._buf == 5:
             # Registered Roaming
             return self._buf
-        else:
-            # "Unknown"
-            return self._buf
+        # "Unknown"
+        return self._buf
 
     @property
-    def RSSI(self):
+    def rssi(self):
         """Returns cellular network's Received Signal Strength Indicator (RSSI)."""
         if not self._send_parse_reply(b"AT+CSQ", b"+CSQ: "):
             return False
@@ -378,8 +384,8 @@ class FONA:
             rssi = -111
         elif reply_num == 31:
             rssi = -52
-        
-        if reply_num >= 2 and reply_num <= 30:
+
+        if 2 <= reply_num <= 30:
             rssi = map_range(reply_num, 2, 30, -110, -54)
 
         # read out the 'ok'
@@ -387,7 +393,7 @@ class FONA:
         return rssi
 
     @property
-    def GPS(self):
+    def gps(self):
         """Returns the GPS status, as a string."""
         if self._debug:
             print("GPS STATUS")
@@ -408,21 +414,18 @@ class FONA:
         else:
             raise NotImplementedError("FONA 808 v1 not currently supported by this library.")
 
-        if status < 0:
-            return "Failed to query module"
-        elif status == 0:
+        if status == 0:
             return "GPS off"
-        elif status == 1:
+        if status == 1:
             return "No fix"
-        elif status == 2:
+        if status == 2:
             return "2D fix"
-        elif status == 3:
+        if status == 3:
             return "3D fix"
-        else:
-            return "Failed to query GPS module, is it connected?"
+        return "Failed to query GPS module, is it connected?"
 
-    @GPS.setter
-    def GPS(self, gps_on=False):
+    @gps.setter
+    def gps(self, gps_on=False):
         """Enables or disables the GPS module.
         NOTE: This is only for FONA 3G or FONA808 modules.
         :param bool gps_on: Enables the GPS module, disabled by default.
@@ -438,10 +441,9 @@ class FONA:
         if self._fona_type == FONA_808_V2:
             if not self._send_parse_reply(b"AT+CGPSPWR?", b"+CGPSPWR: ", ":"):
                 return False
-            else:
-                self._read_line()
-                if not self._send_parse_reply(b"AT+CGNSPWR?", b"+CGNSPWR: ", ":"):
-                    return False
+        self._read_line()
+        if not self._send_parse_reply(b"AT+CGNSPWR?", b"+CGNSPWR: ", ":"):
+            return False
 
         state = self._buf
 
@@ -453,16 +455,15 @@ class FONA:
                 if not self._send_check_reply(b"AT+CGNSPWR=1", reply=REPLY_OK):
                     return False
             else:
-                if not self._send_parse_reply(b"AT+CGPSPWR=1", reply=REPLY_OK):
+                if not self._send_parse_reply(b"AT+CGPSPWR=1", reply_data=REPLY_OK):
                     return False
         else:
             if self._fona_type == FONA_808_V2:
                 # try GNS
                 if not self._send_check_reply(b"AT+CGNSPWR=0", reply=REPLY_OK):
                     return False
-                else:
-                    if not self._send_check_reply(b"AT+CGPSPWR=0", reply=REPLY_OK):
-                        return False
+                if not self._send_check_reply(b"AT+CGPSPWR=0", reply=REPLY_OK):
+                    return False
 
         return True
 
@@ -485,7 +486,7 @@ class FONA:
 
         # eat the second line
         self._read_line()
-        # parse the third 
+        # parse the third
         self._read_line()
 
         self._parse_reply(b"+CDNSGIP:", idx=1)
@@ -498,16 +499,17 @@ class FONA:
         :param int sock_num: Desired socket number.
 
         """
-        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of socket for the FONA module."
+        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
+                                             sockets for the FONA module."
         if not self._send_check_reply(b"AT+CIPSTATUS=" + str(sock_num).encode(),
                                       reply=REPLY_OK, timeout=100):
             return False
         self._read_line(100)
-        
+
         if self._debug:
             print("\t<--- ", self._buf)
-        
-        if not "STATE: CONNECT OK" in self._buf.decode():
+
+        if 'STATE: CONNECT OK' not in self._buf.decode():
             return False
         return True
 
@@ -516,8 +518,10 @@ class FONA:
         :param int sock_num: Desired socket to return bytes available from.
 
         """
-        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of socket for the FONA module."
-        if not self._send_parse_reply(b"AT+CIPRXGET=4,"+str(sock_num).encode(), b"+CIPRXGET: 4,"+ str(socket_num).encode()+b","):
+        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
+                                             sockets for the FONA module."
+        if not self._send_parse_reply(b"AT+CIPRXGET=4,"+str(sock_num).encode(),
+                                      b"+CIPRXGET: 4,"+ str(sock_num).encode()+b","):
             return False
         if self._debug:
             print("\t {} bytes available.".format(self._buf))
@@ -534,7 +538,8 @@ class FONA:
 
         """
         self._uart.reset_input_buffer()
-        assert sock_num < FONA_MAX_SOCKETS, "sock_num exceeds maximum number of sockets supported by FONA."
+        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
+                                             sockets for the FONA module."
 
         if self._debug:
             print(
@@ -553,7 +558,7 @@ class FONA:
             if self._debug:
                 print("\t--->AT+CIPSTART=\"UDP\",\"{}\",{}".format(dest, port))
                 self._uart.write(b",\"UDP\",\"")
-        self._uart.write(dest.encode());
+        self._uart.write(dest.encode())
         self._uart.write(b"\",\"")
         self._uart.write(str(port).encode())
         self._uart.write(b"\"")
@@ -572,7 +577,8 @@ class FONA:
         :param int sock_num: Desired socket number.
 
         """
-        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of socket for the FONA module."
+        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
+                                             sockets for the FONA module."
         if not self._send_check_reply(b"AT+CIPCLOSE" + str(sock_num).encode(), reply=REPLY_OK):
             return False
         return True
@@ -585,7 +591,8 @@ class FONA:
         :param int length: Desired length to read.
 
         """
-        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of socket for the FONA module."
+        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
+                                             sockets for the FONA module."
         self._read_line()
         if self._debug:
             print("\t ---> AT+CIPRXGET=2,{}".format(length))
@@ -613,7 +620,8 @@ class FONA:
         :param bytes buffer: Bytes to write to socket.
 
         """
-        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of socket for the FONA module."
+        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
+                                             sockets for the FONA module."
         self._uart.reset_input_buffer()
 
         if self._debug:
@@ -638,8 +646,8 @@ class FONA:
 
         if self._debug:
             print("\t<--- ", self._buf)
-        
-        if not "SEND OK" in self._buf.decode():
+
+        if 'SEND OK' not in self._buf.decode():
             return False
         return True
 
@@ -703,7 +711,7 @@ class FONA:
         self._uart.write(data.encode())
         if not self._expect_reply(REPLY_OK):
             return False
-        
+
         # Perform HTTP POST
         if not self._http_action(FONA_HTTP_POST):
             return False
@@ -711,7 +719,7 @@ class FONA:
         if self._debug:
             print("Status: ", self._http_status)
             print("Length: ", self._http_data_len)
-        
+
         # Check bytes in buffer
         if not self._http_read_all():
             return False
@@ -757,13 +765,15 @@ class FONA:
         return True
 
     def _http_action(self, method, timeout=10000):
-        """Perform a HTTP method action. 
+        """Perform a HTTP method action.
         :param int method: FONA_HTTP_ method to perform.
         :param int timeout: Time to wait for response, in milliseconds.
 
         """
         # send request
-        if not self._send_check_reply(prefix=b"AT+HTTPACTION=", suffix=str(method).encode(), reply=REPLY_OK):
+        if not self._send_check_reply(prefix=b"AT+HTTPACTION=",
+                                      suffix=str(method).encode(),
+                                      reply=REPLY_OK):
             return False
 
         # parse response status and size
@@ -791,11 +801,11 @@ class FONA:
         # initialize HTTP service
         if not self._http_init():
             return False
-        
+
         # set client id
         if not self._http_para(b"CID", 1):
             return False
-        
+
         # set user agent
         if not self._http_para(b"UA", self._user_agent):
             return False
@@ -803,13 +813,13 @@ class FONA:
         # set URL
         if not self._http_para(b"URL", url.encode()):
             return False
-        
+
         # set https redirect
         if self._https_redirect:
             if not self._http_para(b"REDIR", 1):
                 return False
             # set HTTP SSL
-            if not self.http_ssl(True):
+            if not self._http_ssl(True):
                 return False
 
         return True
@@ -822,9 +832,9 @@ class FONA:
         if enable:
             if not self._send_check_reply(b"AT+HTTPSSL=1", reply=REPLY_OK):
                 return False
-        else:
-            if not self._send_check_reply(b"AT+HTTPSSL=0", reply=REPLY_OK):
-                return True
+        if not self._send_check_reply(b"AT+HTTPSSL=0", reply=REPLY_OK):
+            return True
+        return True
 
     def _http_para(self, param, value):
         """Command sets up HTTP parameters for the HTTP call.
@@ -920,22 +930,21 @@ class FONA:
 
         """
         # attempt to find reply in buffer
-        p = self._buf.find(reply)
-        if p == -1:
+        parsed_reply = self._buf.find(reply)
+        if parsed_reply == -1:
             return False
-        p = self._buf[p:]
+        parsed_reply = self._buf[parsed_reply:]
 
-        p = self._buf[len(reply):]
-        p = p.decode("utf-8")
+        parsed_reply = self._buf[len(reply):]
+        parsed_reply = parsed_reply.decode("utf-8")
 
-        p = p.split(divider)
-        p = p[idx]
-
+        parsed_reply = parsed_reply.sparsed_replylit(divider)
+        parsed_reply = parsed_reply[idx]
 
         try:
-            self._buf = int(p)
+            self._buf = int(parsed_reply)
         except:
-            self._buf = p
+            self._buf = parsed_reply
 
         return True
 
@@ -952,11 +961,11 @@ class FONA:
                 break
 
             while self._uart.in_waiting:
-                c = self._uart.read(1)
-                # print(c)
-                if c == b'\r':
+                char = self._uart.read(1)
+                # print(char)
+                if char == b'\r':
                     continue
-                if c == b'\n':
+                if char == b'\n':
                     if reply_idx == 0:
                         # ignore first '\n'
                         continue
@@ -964,8 +973,8 @@ class FONA:
                         # second '\n' is EOL
                         timeout = 0
                         break
-                # print(c, self._buf)
-                self._buf += c
+                # print(char, self._buf)
+                self._buf += char
                 reply_idx += 1
 
             if timeout == 0:
@@ -978,7 +987,8 @@ class FONA:
         return reply_idx
 
 
-    def _send_check_reply(self, send=None, prefix=None, suffix=None, reply=None, timeout=FONA_DEFAULT_TIMEOUT_MS):
+    def _send_check_reply(self, send=None, prefix=None,
+                          suffix=None, reply=None, timeout=FONA_DEFAULT_TIMEOUT_MS):
         """Sends data to FONA, validates response.
         :param bytes send: Command.
         :param bytes reply: Expected response from module.
@@ -1056,4 +1066,3 @@ class FONA:
         if reply not in self._buf:
             return False
         return True
-
