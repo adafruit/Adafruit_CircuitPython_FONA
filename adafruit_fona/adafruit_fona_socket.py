@@ -147,7 +147,7 @@ class socket:
         host, port = address
 
         print(host, port)
-        
+
         """
         if hasattr(host, "split"):
             host = tuple(map(int, host.split(".")))
@@ -161,12 +161,12 @@ class socket:
 
     def send(self, data):
         """Send data to the socket. The socket must be connected to
-        a remote socket.
-        :param bytearray data: Desired data to send to the socket.
+        a remote socket prior to calling this method.
+        :param bytes data: Desired data to send to the socket.
 
         """
-        # TODO!
-        pass
+        _the_interface.socket_write(self._socknum, data)
+        gc.collect()
 
     def recv(self, bufsize=0):  # pylint: disable=too-many-branches
         """Reads some bytes from the connected remote address.

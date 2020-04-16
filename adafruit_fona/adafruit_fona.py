@@ -626,17 +626,20 @@ class FONA:
         :param bytes buffer: Bytes to write to socket.
 
         """
+        self._read_line()
         assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
-        self._uart.reset_input_buffer()
+
 
         if self._debug:
             print("\t--->AT+CIPSEND={},{}".format(sock_num, len(buffer)))
 
+        self._uart.reset_input_buffer()
         self._uart.write(b"AT+CIPSEND="+str(sock_num).encode())
         self._uart.write(b"," + str(len(buffer)).encode())
         self._uart.write(b"\r\n")
         self._read_line()
+
 
         if self._debug:
             print("\t<--- ", self._buf)
@@ -653,6 +656,7 @@ class FONA:
 
         if 'SEND OK' not in self._buf.decode():
             return False
+
         return True
 
     ### HTTP (High Level Methods) ###

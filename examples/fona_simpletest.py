@@ -48,3 +48,10 @@ print("Connecting to: ", SERVER_ADDRESS[0])
 sock.connect(SERVER_ADDRESS)
 
 print("Connected to ", sock.getpeername())
+
+time.sleep(7)
+
+# Make a HTTP Request
+sock.send(b"GET /testwifi/index.html HTTP/1.1\n")
+sock.send(b"Host: 104.236.193.178")
+
