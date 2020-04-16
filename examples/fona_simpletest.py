@@ -1,6 +1,5 @@
 import time
 import board
-import busio
 import digitalio
 from adafruit_fona.adafruit_fona import FONA
 import adafruit_fona.adafruit_fona_socket as socket
@@ -24,8 +23,9 @@ print("FONA WebClient Test")
 # Enable GPS
 fona.gps = True
 # wait for a fix
-# TODO: Change this to wait for a fix instead!
-time.sleep(7)
+while fona.gps != 3: 
+    print("Waiting for GPS fix...")
+    time.sleep(5)
 
 # Bring up cellular connection
 fona.set_gprs((secrets["apn"], secrets["apn_username"], secrets["apn_password"]))

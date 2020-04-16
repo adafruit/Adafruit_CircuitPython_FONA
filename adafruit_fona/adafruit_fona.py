@@ -383,7 +383,7 @@ class FONA:
 
     @property
     def gps(self):
-        """Returns the GPS status, as a string."""
+        """Returns the GPS status."""
         if self._debug:
             print("GPS STATUS")
         if self._fona_type == FONA_808_V2:
@@ -403,15 +403,7 @@ class FONA:
         else:
             raise NotImplementedError("FONA 808 v1 not currently supported by this library.")
 
-        if status == 0:
-            return "GPS off"
-        if status == 1:
-            return "No fix"
-        if status == 2:
-            return "2D fix"
-        if status == 3:
-            return "3D fix"
-        return "Failed to query GPS module, is it connected?"
+        return status
 
     @gps.setter
     def gps(self, gps_on=False):
