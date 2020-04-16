@@ -58,9 +58,9 @@ def htons(x):
 
 
 # pylint: disable=bad-whitespace
-SOCK_STREAM = const(0x21)  # TCP
+SOCK_STREAM = const(0x00)  # TCP
 TCP_MODE = 80
-SOCK_DGRAM = const(0x02)  # UDP
+SOCK_DGRAM = const(0x01)  # UDP
 AF_INET = const(3)
 NO_SOCKET_AVAIL = const(255)
 # pylint: enable=bad-whitespace
@@ -106,13 +106,13 @@ class socket:
 
         self._socknum = _the_interface.get_socket(SOCKETS)
         SOCKETS.append(self._socknum)
-        #self.settimeout(self._timeout)
+        self.settimeout(self._timeout)
 
 
     @property
     def socknum(self):
         """Returns the socket object's socket number."""
-        # TODO!
+        return self._socknum
         pass
 
     @property
@@ -123,7 +123,7 @@ class socket:
 
     def getpeername(self):
         """Return the remote address to which the socket is connected."""
-        # TODO!
+        return _the_interface.remote_ip(self.socknum)
         pass
 
     def inet_aton(self, ip_string):
@@ -141,8 +141,23 @@ class socket:
         :param int conntype: Connection type (HTTP or HTTPS).
 
         """
-        # TODO!
-        pass
+        assert (
+            conntype != 0x03
+        ), "Error: SSL/TLS is not currently supported by CircuitPython."
+        host, port = address
+
+        print(host, port)
+        
+        """
+        if hasattr(host, "split"):
+            host = tuple(map(int, host.split(".")))
+        """
+
+        if not _the_interface.socket_connect(
+            self.socknum, host, port, conn_mode=self._sock_type
+        ):
+            raise RuntimeError("Failed to connect to host", host)
+        self._buffer = b""
 
     def send(self, data):
         """Send data to the socket. The socket must be connected to
@@ -180,8 +195,9 @@ class socket:
         :param int value: Socket read timeout, in seconds.
 
         """
-        # TODO!
-        pass
+        if value < 0:
+            raise Exception("Timeout period should be non-negative.")
+        self._timeout = value
 
     def gettimeout(self):
         """Return the timeout in seconds (float) associated

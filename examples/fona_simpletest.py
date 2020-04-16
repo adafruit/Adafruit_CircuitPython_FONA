@@ -4,8 +4,8 @@ import digitalio
 from adafruit_fona.adafruit_fona import FONA
 import adafruit_fona.adafruit_fona_socket as socket
 
-TEXT_URL = "http://wifitest.adafruit.com/testwifi/index.html"
-JSON_URL = "http://api.coindesk.com/v1/bpi/currentprice/USD.json"
+# Name address for wifitest.adafruit.com
+SERVER_ADDRESS = ("wifitest.adafruit.com", 80)
 
 # Get GPRS details and more from a secrets.py file
 try:
@@ -22,9 +22,8 @@ print("FONA WebClient Test")
 
 # Enable GPS
 fona.gps = True
-# wait for a fix
 while fona.gps != 3: 
-    print("Waiting for GPS fix...")
+    print("Waiting for GPS fix, retrying...")
     time.sleep(5)
 
 # Bring up cellular connection
@@ -40,37 +39,12 @@ time.sleep(6)
 
 print("Local IP: ", fona.local_ip)
 
-"""
-socket.set_interface(eth)
+# Set socket interface
+socket.set_interface(fona)
 
-# Create a new socket
 sock = socket.socket()
 
 print("Connecting to: ", SERVER_ADDRESS[0])
 sock.connect(SERVER_ADDRESS)
 
 print("Connected to ", sock.getpeername())
-
-# Make a HTTP Request
-sock.send(b"GET /testwifi/index.html HTTP/1.1\n")
-sock.send(b"Host: 104.236.193.178\n")
-sock.send(b"Connection: close\n\n")
-
-# Start transmission timer
-start = time.monotonic()
-
-bytes_avail = 0
-while not bytes_avail:
-    bytes_avail = sock.available()
-    if bytes_avail > 0:
-        data = sock.recv(bytes_avail)
-        print(data[0])
-        break
-    time.sleep(0.05)
-
-end = time.monotonic()
-print("Received: %d bytes"%bytes_avail)
-end = end - start / 1000000.0
-rate = bytes_avail / end / 1000.0
-print("Rate = %0.5f kbytes/second"%rate)
-"""

@@ -488,6 +488,21 @@ class FONA:
             print("Allocated socket #", _sock)
         return _sock
 
+    def remote_ip(self, sock_num):
+        """Returns the IP address of the host who sent the current incoming packet.
+        :param int sock_num: Desired socket.
+
+        """
+        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
+                                             sockets for the FONA module."
+        self._uart.write(b"AT+CIPSTATUS=" + str(sock_num).encode()+b"\r\n")
+        self._read_line(100)
+
+        self._parse_reply(b"+CIPSTATUS:", idx=3)
+        if self._debug:
+            print("\t<--- ", self._buf)
+        return self._buf
+
     def socket_status(self, sock_num):
         """Returns if socket is connected.
         :param int sock_num: Desired socket number.
