@@ -32,7 +32,7 @@ A socket compatible interface with the Adafruit FONA cellular module.
 import gc
 import time
 from micropython import const
-from adafruit_fona import FONA
+from adafruit_fona import adafruit_fona
 
 _the_interface = None  # pylint: disable=invalid-name
 
@@ -98,8 +98,16 @@ class socket:
     def __init__(
         self, family=AF_INET, type=SOCK_STREAM, proto=0, fileno=None, socknum=None
     ):
-        # TODO!
-        pass
+        if family != AF_INET:
+            raise RuntimeError("Only AF_INET family supported by cellular sockets.")
+        self._sock_type = type
+        self._buffer = b""
+        self._timeout = 0
+
+        self._socknum = _the_interface.get_socket(SOCKETS)
+        SOCKETS.append(self._socknum)
+        #self.settimeout(self._timeout)
+
 
     @property
     def socknum(self):

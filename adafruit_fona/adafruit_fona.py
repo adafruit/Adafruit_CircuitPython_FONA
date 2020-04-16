@@ -473,6 +473,21 @@ class FONA:
 
     ### Socket API (TCP, UDP) ###
 
+    def get_socket(self, sockets):
+        """Returns the first avaliable socket.
+        NOTE: This does NOT allocate a socket.
+        :param list sockets: List of sockets already in-use.
+
+        """
+        if self._debug:
+            print("*** Allocating Socket")
+        for _sock in range(0, FONA_MAX_SOCKETS):
+            if _sock not in sockets:
+                break
+        if self._debug:
+            print("Allocated socket #", _sock)
+        return _sock
+
     def socket_status(self, sock_num):
         """Returns if socket is connected.
         :param int sock_num: Desired socket number.
