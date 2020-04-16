@@ -24,7 +24,7 @@
 `adafruit_fona`
 ================================================================================
 
-CircuitPython library for the Adafruit FONA
+CircuitPython library for the Adafruit FONA cellular module
 
 
 * Author(s): ladyada, Brent Rubell
@@ -32,17 +32,11 @@ CircuitPython library for the Adafruit FONA
 Implementation Notes
 --------------------
 
-**Hardware:**
-
-* `Adafruit FONA 808 Breakout <https://www.adafruit.com/product/2542>`_
-* `Adafruit FONA 808 Shield <https://www.adafruit.com/product/2636>`_
-
 **Software and Dependencies:**
 
 * Adafruit CircuitPython firmware for the supported boards:
   https://github.com/adafruit/circuitpython/releases
 
-* Adafruit's Bus Device library: https://github.com/adafruit/Adafruit_CircuitPython_BusDevice
 """
 import time
 from micropython import const
@@ -52,9 +46,8 @@ from simpleio import map_range
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_FONA.git"
 
-
 # pylint: disable=bad-whitespace
-FONA_BAUD = const(4800)
+FONA_BAUD = 4800
 FONA_DEFAULT_TIMEOUT_MS = 500 # TODO: Check this against arduino...
 
 # COMMANDS
@@ -118,7 +111,7 @@ class FONA:
     @property
     # pylint: disable=too-many-return-statements
     def version(self):
-        """Returns FONA Version,as a string."""
+        """Returns FONA Version, as a string."""
         if self._fona_type == FONA_800_L:
             return "FONA 800L"
         if self._fona_type == FONA_800_H:
@@ -924,7 +917,7 @@ class FONA:
         parsed_reply = self._buf[len(reply):]
         parsed_reply = parsed_reply.decode("utf-8")
 
-        parsed_reply = parsed_reply.sparsed_replylit(divider)
+        parsed_reply = parsed_reply.split(divider)
         parsed_reply = parsed_reply[idx]
 
         try:
