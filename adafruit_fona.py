@@ -493,12 +493,13 @@ class FONA:
 
     ### Socket API (TCP, UDP) ###
 
-    def socket_status(self, socket_num):
+    def socket_status(self, sock_num):
         """Returns if socket is connected.
-        :param int socket_num: Desired socket number.
+        :param int sock_num: Desired socket number.
 
         """
-        if not self._send_check_reply(b"AT+CIPSTATUS=" + str(socket_num).encode(),
+        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of socket for the FONA module."
+        if not self._send_check_reply(b"AT+CIPSTATUS=" + str(sock_num).encode(),
                                       reply=REPLY_OK, timeout=100):
             return False
         self._read_line(100)
@@ -510,12 +511,13 @@ class FONA:
             return False
         return True
 
-    def socket_available(self, socket_num):
+    def socket_available(self, sock_num):
         """Returns the amount of bytes to be read from the socket.
-        :param int socket_num: Desired socket to return bytes available from.
+        :param int sock_num: Desired socket to return bytes available from.
 
         """
-        if not self._send_parse_reply(b"AT+CIPRXGET=4,"+str(socket_num).encode(), b"+CIPRXGET: 4,"+ str(socket_num).encode()+b","):
+        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of socket for the FONA module."
+        if not self._send_parse_reply(b"AT+CIPRXGET=4,"+str(sock_num).encode(), b"+CIPRXGET: 4,"+ str(socket_num).encode()+b","):
             return False
         if self._debug:
             print("\t {} bytes available.".format(self._buf))
@@ -570,21 +572,24 @@ class FONA:
         :param int sock_num: Desired socket number.
 
         """
+        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of socket for the FONA module."
         if not self._send_check_reply(b"AT+CIPCLOSE" + str(sock_num).encode(), reply=REPLY_OK):
             return False
         return True
 
-    def socket_read(self, buf, length):
+    def socket_read(self, sock_num, buf, length):
         """Read data from the network into a buffer.
         Returns buffer and amount of bytes read.
+        :param int sock_num: Desired socket to read from.
         :param bytes buf: Buffer to read into.
         :param int length: Desired length to read.
 
         """
+        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of socket for the FONA module."
         self._read_line()
         if self._debug:
             print("\t ---> AT+CIPRXGET=2,{}".format(length))
-        self._uart.write(b"AT+CIPRXGET=2,")
+        self._uart.write(b"AT+CIPRXGET=2,"+ str(sock_num).encode() + b",")
         self._uart.write(str(length).encode())
         self._uart.write(b"\r\n")
 
@@ -602,18 +607,20 @@ class FONA:
         buf = self._buf
         return buf, avail
 
-    def socket_write(self, buffer):
+    def socket_write(self, sock_num, buffer):
         """Writes bytes to the socket.
+        :param int sock_num: Desired socket number to write to.
         :param bytes buffer: Bytes to write to socket.
 
         """
+        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of socket for the FONA module."
         self._uart.reset_input_buffer()
 
         if self._debug:
-            print("\t--->AT+CIPSEND=", len(buffer))
-            print("\t--->", buffer)
+            print("\t--->AT+CIPSEND={},{}".format(sock_num, len(buffer)))
 
-        self._uart.write(b"AT+CIPSEND=")
+        self._uart.write(b"AT+CIPSEND="+str(sock_num).encode())
+        self._uart.write(b",")
         self._uart.write(str(len(buffer)).encode())
         self._uart.write(b"\r\n")
         self._read_line()
