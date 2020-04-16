@@ -298,18 +298,14 @@ class FONA:
                     print("setting APN...")
                 self._uart.reset_input_buffer()
 
-                self._uart.write(b"AT+CSTT=\"")
-                self._uart.write(self._apn)
+                self._uart.write(b"AT+CSTT=\"" + self._apn)
 
                 if self._apn_username is not None:
-                    self._uart.write(b"\",\"")
-                    self._uart.write(self._apn_username)
+                    self._uart.write(b"\",\"" + self._apn_username)
 
                 if self._apn_password is not None:
-                    self._uart.write(b"\",\"")
-                    self._uart.write(self._apn_password)
-                self._uart.write(b"\"")
-                self._uart.write(b"\r\n")
+                    self._uart.write(b"\",\"" + self._apn_password)
+                self._uart.write(b"\"\r\n")
 
                 if not self._get_reply(REPLY_OK):
                     return False
@@ -435,7 +431,7 @@ class FONA:
             print("* Setting GPS")
         if not (self._fona_type == FONA_3G_A or self._fona_type == FONA_3G_E or
                     self._fona_type == FONA_808_V1 or self._fona_type == FONA_808_V2):
-                        raise TypeError("GPS unsupported for this FONA module.")
+            raise TypeError("GPS unsupported for this FONA module.")
 
         # check if already enabled or disabled
         if self._fona_type == FONA_808_V2:
@@ -478,9 +474,7 @@ class FONA:
         if isinstance(hostname, str):
             hostname = bytes(hostname, "utf-8")
 
-        self._uart.write(b"AT+CDNSGIP=\"")
-        self._uart.write(hostname)
-        self._uart.write(b"\"\r\n")
+        self._uart.write(b"AT+CDNSGIP=\""+ hostname + b"\"\r\n")
         if not self._expect_reply(REPLY_OK):
             return False
 
@@ -558,10 +552,8 @@ class FONA:
             if self._debug:
                 print("\t--->AT+CIPSTART=\"UDP\",\"{}\",{}".format(dest, port))
                 self._uart.write(b",\"UDP\",\"")
-        self._uart.write(dest.encode())
-        self._uart.write(b"\",\"")
-        self._uart.write(str(port).encode())
-        self._uart.write(b"\"")
+        self._uart.write(dest.encode() + b"\",\"")
+        self._uart.write(str(port).encode() + b"\"")
         self._uart.write(b"\r\n")
 
         if not self._expect_reply(REPLY_OK):
@@ -597,8 +589,7 @@ class FONA:
         if self._debug:
             print("\t ---> AT+CIPRXGET=2,{}".format(length))
         self._uart.write(b"AT+CIPRXGET=2,"+ str(sock_num).encode() + b",")
-        self._uart.write(str(length).encode())
-        self._uart.write(b"\r\n")
+        self._uart.write(str(length).encode() + b"\r\n")
 
         self._read_line()
         if not self._parse_reply(b"+CIPRXGET: 2,"):
@@ -628,8 +619,7 @@ class FONA:
             print("\t--->AT+CIPSEND={},{}".format(sock_num, len(buffer)))
 
         self._uart.write(b"AT+CIPSEND="+str(sock_num).encode())
-        self._uart.write(b",")
-        self._uart.write(str(len(buffer)).encode())
+        self._uart.write(b"," + str(len(buffer)).encode())
         self._uart.write(b"\r\n")
         self._read_line()
 
@@ -640,8 +630,7 @@ class FONA:
             # promoting mark ('>') not found
             return False
 
-        self._uart.write(buffer)
-        self._uart.write(b"\r\n")
+        self._uart.write(buffer + b"\r\n")
         self._read_line(3000)
 
         if self._debug:
@@ -667,8 +656,8 @@ class FONA:
         if not self._http_action(FONA_HTTP_GET, 30000):
             return False
         if self._debug:
-            print("HTTP Status: ", self._http_status)
-            print("HTTP Data Length: ", self._http_data_len)
+            print("Status: {}\nLength:{}".format(self._http_status,
+                                                 self._http_data_len))
 
         # Read HTTP response data
         if not self._http_read_all():
@@ -717,8 +706,8 @@ class FONA:
             return False
 
         if self._debug:
-            print("Status: ", self._http_status)
-            print("Length: ", self._http_data_len)
+            print("Status: {}\nLength:{}".format(self._http_status,
+                                                 self._http_data_len))
 
         # Check bytes in buffer
         if not self._http_read_all():
@@ -750,10 +739,8 @@ class FONA:
             print("\t--->AT+HTTPDATA={},{}".format(size, max_time))
 
         self._uart.write(b"AT+HTTPDATA=")
-        self._uart.write(str(size).encode())
-        self._uart.write(b",")
-        self._uart.write(str(max_time).encode())
-        self._uart.write(b"\r\n")
+        self._uart.write(str(size).encode() + b",")
+        self._uart.write(str(max_time).encode() + b"\r\n")
 
         return self._expect_reply(b"DOWNLOAD")
 
@@ -857,9 +844,8 @@ class FONA:
         if self._debug:
             print("\t---> AT+HTTPPARA={}".format(param))
 
-        self._uart.write(b"AT+HTTPPARA=\"")
+        self._uart.write(b"AT+HTTPPARA=\"" + param)
 
-        self._uart.write(param)
         if quoted:
             self._uart.write(b"\",\"")
         else:
@@ -943,7 +929,7 @@ class FONA:
 
         try:
             self._buf = int(parsed_reply)
-        except:
+        except ValueError:
             self._buf = parsed_reply
 
         return True
@@ -1042,11 +1028,8 @@ class FONA:
             print('""')
 
 
-        self._uart.write(prefix)
-        self._uart.write(b"\"")
-        self._uart.write(suffix)
-        self._uart.write(b"\"")
-        self._uart.write(b"\r\n")
+        self._uart.write(prefix + b"\"")
+        self._uart.write(suffix + b"\"\r\n")
 
         line = self._read_line(timeout)
 
