@@ -118,7 +118,7 @@ class socket:
     @property
     def connected(self):
         """Returns whether or not we are connected to the socket."""
-        # TODO!
+        return _the_interface.socket_status(self.socknum)
         pass
 
     def getpeername(self):
@@ -131,7 +131,10 @@ class socket:
         :param str ip_string: IP Address, as a dotted-quad string.
 
         """
-        # TODO!
+        self._buffer = b""
+        self._buffer = [int(item) for item in ip_string.split(".")]
+        self._buffer = bytearray(self._buffer)
+        return self._buffer
         pass
 
     def connect(self, address, conntype=None):
@@ -146,8 +149,8 @@ class socket:
         ), "Error: SSL/TLS is not currently supported by CircuitPython."
         host, port = address
 
-        print(host, port)
-
+        # TODO: Check if this is still required?
+        # TODO: It may not be...
         """
         if hasattr(host, "split"):
             host = tuple(map(int, host.split(".")))
@@ -184,11 +187,10 @@ class socket:
         pass
 
     def available(self):
-        """Returns how many bytes of data are available to be read from the socket.
+        """Returns how many bytes are available to be read from the socket.
 
         """
-        # TODO!
-        pass
+        return _the_interface.socket_available(self._socknum)
 
     def settimeout(self, value):
         """Sets socket read timeout.
@@ -204,15 +206,8 @@ class socket:
         with socket operations, or None if no timeout is set.
 
         """
-        # TODO!
-        pass
-
-    def disconnect(self):
-        """Disconnects an active socket."""
-        # TODO!
-        pass
+        return self._timeout
 
     def close(self):
         """Closes the socket."""
-        # TODO!
-        pass
+        return _the_interface.socket_close(self._socknum)

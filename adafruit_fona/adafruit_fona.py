@@ -510,16 +510,23 @@ class FONA:
         """
         assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
-        if not self._send_check_reply(b"AT+CIPSTATUS=" + str(sock_num).encode(),
+        if not self._send_check_reply(b"AT+CIPSTATUS",
                                       reply=REPLY_OK, timeout=100):
             return False
-        self._read_line(100)
+        # eat the 'STATE: ' message
+        self._read_line()
+        # rets the socket state
+        self._read_line()
 
         if self._debug:
             print("\t<--- ", self._buf)
 
-        if 'STATE: CONNECT OK' not in self._buf.decode():
-            return False
+        # TODO: This needs some refac!
+        # --->  b'AT+CIPSTATUS'
+        # <---  b'OK'
+        # <---  b'STATE: IP PROCESSING'
+        # <---  b'C: 0,0,"TCP","104.236.193.178","80","CONNECTED'
+
         return True
 
     def socket_available(self, sock_num):
@@ -579,16 +586,26 @@ class FONA:
 
         return True
 
-    def socket_close(self, sock_num):
-        """Closes UDP or TCP connection.
+
+    def socket_close(self, sock_num, quick_close=1):
+        """Close TCP or UDP connection
         :param int sock_num: Desired socket number.
+        :param int quick_close: Quickly or slowly close the socket. Enabled by default
 
         """
         assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
-        if not self._send_check_reply(b"AT+CIPCLOSE" + str(sock_num).encode(), reply=REPLY_OK):
+        # eat prv. response
+        self._read_line()
+        self._uart.write(b"AT+CIPCLOSE=" + str(sock_num).encode())
+        self._uart.write(b"," + str(quick_close).encode() + b"\r\n")
+        
+        self._read_line()
+        self._parse_reply(b"", idx=1)
+        if not "CLOSE OK" in self._buf:
             return False
         return True
+
 
     def socket_read(self, sock_num, buf, length):
         """Read data from the network into a buffer.
