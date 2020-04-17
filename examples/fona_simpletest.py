@@ -27,7 +27,7 @@ print("Adafruit FONA WebClient Test")
 
 # Enable GPS
 fona.gps = True
-while fona.gps != 3:
+while fona.gps != 3: 
     print("Waiting for GPS fix, retrying...")
     time.sleep(5)
 
