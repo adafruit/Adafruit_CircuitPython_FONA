@@ -17,7 +17,7 @@ Introduction
     :target: https://github.com/psf/black
     :alt: Code Style: Black
 
-CircuitPython library for the `Adafruit FONA <https://www.adafruit.com/index.php?main_page=category&cPath=281>`_.
+CircuitPython library for the `Adafruit FONA <https://www.adafruit.com/index.php?main_page=category&cPath=281>`_ cellular module.
 
 
 Dependencies
@@ -25,7 +25,7 @@ Dependencies
 This driver depends on:
 
 * `Adafruit CircuitPython <https://github.com/adafruit/circuitpython>`_
-* `Bus Device <https://github.com/adafruit/Adafruit_CircuitPython_BusDevice>`_
+* `SimpleIO <https://github.com/adafruit/Adafruit_CircuitPython_SimpleIO>`_
 
 Please ensure all dependencies are available on the CircuitPython filesystem.
 This is easily achieved by downloading
@@ -59,7 +59,7 @@ To install in a virtual environment in your current project:
 Usage Example
 =============
 
-Please see the examples directory for code usage. 
+Please see the examples directory for code usage.
 
 Contributing
 ============

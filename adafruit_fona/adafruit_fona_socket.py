@@ -71,10 +71,10 @@ SOCKETS = []
 def getaddrinfo(host, port, family=0, socktype=0, proto=0, flags=0):
     """Translate the host/port argument into a sequence of 5-tuples that
     contain all the necessary arguments for creating a socket connected to that service.
-
     """
-    # TODO!
-    pass
+    if not isinstance(port, int):
+        raise RuntimeError("Port must be an integer")
+    return [(AF_INET, socktype, proto, "", (gethostbyname(host), port))]
 
 
 def gethostbyname(hostname):

@@ -530,7 +530,7 @@ class FONA:
         state = self._buf
 
         # eat the rest of the sockets
-        for socks in range(sock_num, FONA_MAX_SOCKETS):
+        for _ in range(sock_num, FONA_MAX_SOCKETS):
             self._read_line()
 
         if not "CONNECTED" in state:
@@ -609,7 +609,7 @@ class FONA:
         self._read_line()
         self._uart.write(b"AT+CIPCLOSE=" + str(sock_num).encode())
         self._uart.write(b"," + str(quick_close).encode() + b"\r\n")
-        
+
         self._read_line()
         self._parse_reply(b"", idx=1)
         if not "CLOSE OK" in self._buf:
