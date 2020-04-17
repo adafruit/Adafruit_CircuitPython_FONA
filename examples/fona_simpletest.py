@@ -4,7 +4,6 @@ import digitalio
 from adafruit_fona.adafruit_fona import FONA
 import adafruit_fona.adafruit_fona_socket as socket
 
-# Name address for wifitest.adafruit.com
 SERVER_ADDRESS = ("wifitest.adafruit.com", 80)
 
 # Get GPRS details and more from a secrets.py file
@@ -18,7 +17,7 @@ except ImportError:
 rst = digitalio.DigitalInOut(board.D4)
 fona = FONA(board.TX, board.RX, rst, debug=True)
 
-print("FONA WebClient Test")
+print("Adafruit FONA WebClient Test")
 
 # Enable GPS
 fona.gps = True
@@ -44,5 +43,26 @@ socket.set_interface(fona)
 
 sock = socket.socket()
 
-hostname = socket.gethostbyname("www.sim.com")
-print("Hostname: ", hostname)
+print("Connecting to: ", SERVER_ADDRESS[0])
+sock.connect(SERVER_ADDRESS)
+
+print("Connected to:", sock.getpeername())
+time.sleep(7)
+
+# Make a HTTP Request
+sock.send(b"GET /testwifi/index.html HTTP/1.1\n")
+sock.send(b"Host: 104.236.193.178")
+sock.send(b"Connection: close\n\n")
+
+bytes_avail = 0
+while not bytes_avail:
+    bytes_avail = sock.available()
+    if bytes_avail > 0:
+        print("bytes_avail: ", bytes_avail)
+        data = sock.recv(bytes_avail)
+        print(data)
+        break
+    time.sleep(0.05)
+
+sock.close()
+print("Socket connected: ", sock.connected)
