@@ -513,19 +513,27 @@ class FONA:
         if not self._send_check_reply(b"AT+CIPSTATUS",
                                       reply=REPLY_OK, timeout=100):
             return False
+
         # eat the 'STATE: ' message
         self._read_line()
-        # rets the socket state
-        self._read_line()
-
         if self._debug:
             print("\t<--- ", self._buf)
 
-        # TODO: This needs some refac!
-        # --->  b'AT+CIPSTATUS'
-        # <---  b'OK'
-        # <---  b'STATE: IP PROCESSING'
-        # <---  b'C: 0,0,"TCP","104.236.193.178","80","CONNECTED'
+        # read "C: <n>" for each active connection
+        for state in range(0, sock_num+1):
+            self._read_line()
+            if state == sock_num:
+                break
+        self._parse_reply(b"C:", idx=5)
+
+        state = self._buf
+
+        # eat the rest of the sockets
+        for socks in range(sock_num, FONA_MAX_SOCKETS):
+            self._read_line()
+
+        if not "CONNECTED" in state:
+            return False
 
         return True
 

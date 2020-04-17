@@ -56,6 +56,7 @@ sock.send(b"GET /testwifi/index.html HTTP/1.1\n")
 sock.send(b"Host: 104.236.193.178")
 sock.send(b"Connection: close\n\n")
 
+
 bytes_avail = 0
 while not bytes_avail:
     bytes_avail = sock.available()
@@ -67,3 +68,4 @@ while not bytes_avail:
     time.sleep(5)
 
 sock.close()
+print("Connected: ", sock.connected)
