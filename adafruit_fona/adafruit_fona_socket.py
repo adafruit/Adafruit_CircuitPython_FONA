@@ -32,7 +32,6 @@ A socket compatible interface with the Adafruit FONA cellular module.
 import gc
 import time
 from micropython import const
-from adafruit_fona import adafruit_fona
 
 _the_interface = None  # pylint: disable=invalid-name
 
@@ -83,10 +82,10 @@ def gethostbyname(hostname):
     is returned as a string.
     :param str hostname: Desired hostname.
     """
-    # TODO!
-    pass
+    addr = _the_interface.get_host_by_name(hostname)
+    return addr
 
-
+# pylint: disable=invalid-name, redefined-builtin
 class socket:
     """A simplified implementation of the Python 'socket' class
     for connecting to a FONA cellular module.
@@ -113,18 +112,18 @@ class socket:
     def socknum(self):
         """Returns the socket object's socket number."""
         return self._socknum
-        pass
+
 
     @property
     def connected(self):
         """Returns whether or not we are connected to the socket."""
         return _the_interface.socket_status(self.socknum)
-        pass
+
 
     def getpeername(self):
         """Return the remote address to which the socket is connected."""
         return _the_interface.remote_ip(self.socknum)
-        pass
+
 
     def inet_aton(self, ip_string):
         """Convert an IPv4 address from dotted-quad string format.
@@ -135,7 +134,7 @@ class socket:
         self._buffer = [int(item) for item in ip_string.split(".")]
         self._buffer = bytearray(self._buffer)
         return self._buffer
-        pass
+
 
     def connect(self, address, conntype=None):
         """Connect to a remote socket at address. (The format of address depends
@@ -148,13 +147,6 @@ class socket:
             conntype != 0x03
         ), "Error: SSL/TLS is not currently supported by CircuitPython."
         host, port = address
-
-        # TODO: Check if this is still required?
-        # TODO: It may not be...
-        """
-        if hasattr(host, "split"):
-            host = tuple(map(int, host.split(".")))
-        """
 
         if not _the_interface.socket_connect(
             self.socknum, host, port, conn_mode=self._sock_type
@@ -175,7 +167,7 @@ class socket:
         """Reads some bytes from the connected remote address.
         :param int bufsize: maximum number of bytes to receive
         """
-        print("Socket read", bufsize)
+        # print("Socket read", bufsize)
         if bufsize == 0:  # read as much as we can at the moment
             while True:
                 avail = self.available()
@@ -193,7 +185,7 @@ class socket:
         to_read = bufsize - len(self._buffer)
         received = []
         while to_read > 0:
-            print("Bytes to read:", to_read)
+            # print("Bytes to read:", to_read)
             avail = self.available()
             if avail:
                 stamp = time.monotonic()

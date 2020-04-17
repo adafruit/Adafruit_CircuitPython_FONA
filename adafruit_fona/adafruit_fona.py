@@ -449,26 +449,27 @@ class FONA:
         return True
 
     def get_host_by_name(self, hostname):
-        """DNS Function - converts a hostname to a packed 4-byte IP address.
+        """Converts a hostname to a packed 4-byte IP address.
         Returns a 4 bytearray.
         :param str hostname: Destination server.
 
         """
+        self._read_line()
         if self._debug:
             print("*** get_host_by_name")
         if isinstance(hostname, str):
             hostname = bytes(hostname, "utf-8")
 
         self._uart.write(b"AT+CDNSGIP=\""+ hostname + b"\"\r\n")
+
         if not self._expect_reply(REPLY_OK):
             return False
-
-        # eat the second line
+        # eat the blank line
         self._read_line()
-        # parse the third
+        # parse the 3rd line
         self._read_line()
 
-        self._parse_reply(b"+CDNSGIP:", idx=1)
+        self._parse_reply(b"+CDNSGIP:", idx=2)
         return self._buf
 
     ### Socket API (TCP, UDP) ###

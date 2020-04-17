@@ -44,27 +44,5 @@ socket.set_interface(fona)
 
 sock = socket.socket()
 
-print("Connecting to: ", SERVER_ADDRESS[0])
-sock.connect(SERVER_ADDRESS)
-
-print("Connected to ", sock.getpeername())
-
-time.sleep(7)
-
-# Make a HTTP Request
-sock.send(b"GET /testwifi/index.html HTTP/1.1\n")
-sock.send(b"Host: 104.236.193.178")
-sock.send(b"Connection: close\n\n")
-
-bytes_avail = 0
-while not bytes_avail:
-    bytes_avail = sock.available()
-    if bytes_avail > 0:
-        print("bytes_avail: ", bytes_avail)
-        data = sock.recv(bytes_avail)
-        print(data)
-        break
-    time.sleep(0.05)
-
-sock.close()
-print("Socket connected: ", sock.connected)
+hostname = socket.gethostbyname("www.sim.com")
+print("Hostname: ", hostname)
