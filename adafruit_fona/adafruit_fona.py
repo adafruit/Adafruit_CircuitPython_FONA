@@ -542,6 +542,7 @@ class FONA:
         :param int sock_num: Desired socket to return bytes available from.
 
         """
+        self._read_line()
         assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
         if not self._send_parse_reply(b"AT+CIPRXGET=4,"+str(sock_num).encode(),
@@ -615,11 +616,10 @@ class FONA:
         return True
 
 
-    def socket_read(self, sock_num, buf, length):
+    def socket_read(self, sock_num, length):
         """Read data from the network into a buffer.
         Returns buffer and amount of bytes read.
         :param int sock_num: Desired socket to read from.
-        :param bytes buf: Buffer to read into.
         :param int length: Desired length to read.
 
         """
@@ -627,23 +627,22 @@ class FONA:
                                              sockets for the FONA module."
         self._read_line()
         if self._debug:
-            print("\t ---> AT+CIPRXGET=2,{}".format(length))
-        self._uart.write(b"AT+CIPRXGET=2,"+ str(sock_num).encode() + b",")
+            print("* socket read")
+            print("\t ---> AT+CIPRXGET=2,{},{}".format(sock_num, length))
+        self._uart.write(b"AT+CIPRXGET=2,")
+        self._uart.write(str(sock_num).encode())
+        self._uart.write(b",")
         self._uart.write(str(length).encode() + b"\r\n")
 
         self._read_line()
-        if not self._parse_reply(b"+CIPRXGET: 2,"):
+
+        if not self._parse_reply(b"+CIPRXGET:"):
             return False
-        avail = self._buf
 
-        # read into buffer
-        self._read_line()
+        self._buf = self._uart.read(length)
 
-        if self._debug:
-            print("\t {} bytes read".format(avail))
+        return self._buf
 
-        buf = self._buf
-        return buf, avail
 
     def socket_write(self, sock_num, buffer):
         """Writes bytes to the socket.
