@@ -66,7 +66,7 @@ while not bytes_avail:
     if bytes_avail > 0:
         print("bytes_avail: ", bytes_avail)
         data = sock.recv(bytes_avail)
-        print(data)
+        print(data.decode())
         break
     time.sleep(0.05)
 
