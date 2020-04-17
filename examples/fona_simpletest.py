@@ -21,7 +21,7 @@ uart = busio.UART(board.TX, board.RX, baudrate=4800)
 rst = digitalio.DigitalInOut(board.D4)
 
 # Initialize FONA module (this may take a few seconds)
-fona = FONA(uart, rst, debug=True)
+fona = FONA(uart, rst)
 
 print("Adafruit FONA WebClient Test")
 
