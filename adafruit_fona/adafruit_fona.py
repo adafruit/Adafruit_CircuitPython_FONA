@@ -472,19 +472,18 @@ class FONA:
     ### Socket API (TCP, UDP) ###
 
     def get_socket(self, sockets):
-        """Returns the first avaliable socket.
-        NOTE: This does NOT allocate a socket.
-        :param list sockets: List of sockets already in-use.
+        """Returns the first avaliable (unused) socket
+        by the socket module.
 
         """
         if self._debug:
             print("*** Allocating Socket")
-        for _sock in range(0, FONA_MAX_SOCKETS):
-            if _sock not in sockets:
+        for sock in range(0, FONA_MAX_SOCKETS):
+            if sock not in sockets:
                 break
         if self._debug:
-            print("Allocated socket #", _sock)
-        return _sock
+            print("Allocated socket #", sock)
+        return sock
 
     def remote_ip(self, sock_num):
         """Returns the IP address of the host who sent the current incoming packet.
@@ -680,7 +679,6 @@ class FONA:
             return False
 
         return True
-
 
     ### UART Reply/Response Helpers ###
 
