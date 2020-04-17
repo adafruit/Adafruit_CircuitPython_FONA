@@ -147,7 +147,7 @@ latex_documents = [
         u"AdafruitFONA Library Documentation",
         author,
         "manual",
-    ),
+    )
 ]
 
 # -- Options for manual page output ---------------------------------------
@@ -178,5 +178,5 @@ texinfo_documents = [
         "AdafruitFONALibrary",
         "One line description of project.",
         "Miscellaneous",
-    ),
+    )
 ]
