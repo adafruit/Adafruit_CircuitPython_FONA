@@ -478,6 +478,7 @@ class FONA:
         """
         if self._debug:
             print("*** Allocating Socket")
+        sock = 0
         for sock in range(0, FONA_MAX_SOCKETS):
             if sock not in sockets:
                 break
