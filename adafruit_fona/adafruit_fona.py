@@ -40,14 +40,12 @@ Implementation Notes
 """
 import time
 from micropython import const
-import busio
 from simpleio import map_range
 
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_FONA.git"
 
 # pylint: disable=bad-whitespace
-FONA_BAUD = 4800
 FONA_DEFAULT_TIMEOUT_MS = 500 # TODO: Check this against arduino...
 
 # COMMANDS
@@ -78,21 +76,20 @@ FONA_MAX_SOCKETS = const(6)
 # pylint: disable=too-many-instance-attributes
 class FONA:
     """CircuitPython FONA module interface.
-    :param ~digialio TX: FONA TX Pin
-    :param ~digialio RX: FONA RX Pin
-    :param ~digialio RST: FONA RST Pin
+    :param ~busio.uart UART: FONA UART connection.
+    :param ~digialio RST: FONA RST Pin.
     :param bool set_https_redir: Optionally configure HTTP gets to follow
                                     redirects over SSL.
     :param bool debug: Enable debugging output.
 
     """
     # pylint: disable=too-many-arguments
-    def __init__(self, tx, rx, rst, set_https_redir=False, debug=False):
-        self._buf = b""
+    def __init__(self, uart, rst, set_https_redir=False, debug=False):
+        self._buf = b"" # shared buffer
         self._fona_type = 0
         self._debug = debug
-        # Set up UART interface
-        self._uart = busio.UART(tx, rx, baudrate=FONA_BAUD)
+
+        self._uart = uart
         self._rst = rst
         if not self._init_fona():
             raise RuntimeError("Unable to find FONA. Please check connections.")
