@@ -407,24 +407,41 @@ class FONA:
             raise NotImplementedError(
                 "FONA 808 v1 not currently supported by this library."
             )
-
         return status
 
     @gps.setter
-    def gps(self, gps_on=False):
-        """Enables or disables the GPS module.
+    def gps(self, enable_gps=False):
+        """Attempts to enable or disable the GPS module.
         NOTE: This is only for FONA 3G or FONA808 modules.
+        :param bool enable_gps: Enables the GPS module, disabled by default.
+
+        """
+        # failed attempts before returning -1
+        attempts = 10
+        failure_count = 0
+        # Set the GPS module
+        self._set_gps(enable_gps)
+
+        # Wait for a GPS fix
+        if not self.gps == 3:
+            if self._debug:
+                print("\t* GPS fix not found, retrying, ", failure_count)
+            failure_count += 1
+            time.sleep(5)
+            if failure_count >= attempts:
+                return -1
+
+        return True
+
+    def _set_gps(self, gps_on=False):
+        """Sets GPS module power, parses returned buffer.
         :param bool gps_on: Enables the GPS module, disabled by default.
 
         """
         if self._debug:
             print("* Setting GPS")
-        if not (
-            self._fona_type == FONA_3G_A
-            or self._fona_type == FONA_3G_E
-            or self._fona_type == FONA_808_V1
-            or self._fona_type == FONA_808_V2
-        ):
+        if not (self._fona_type == FONA_3G_A or self._fona_type == FONA_3G_E or
+                    self._fona_type == FONA_808_V1 or self._fona_type == FONA_808_V2):
             raise TypeError("GPS unsupported for this FONA module.")
 
         # check if already enabled or disabled
