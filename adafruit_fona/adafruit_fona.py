@@ -226,7 +226,7 @@ class FONA:
             return False
         return self._buf
 
-    def set_gprs(self, config):
+    def configure_gprs(self, config):
         """If config provided, sets GPRS configuration to provided tuple in format:
         (apn_network, apn_username, apn_password)
 
@@ -249,6 +249,16 @@ class FONA:
         if gprs_on:
             if self._debug:
                 print("* Enabling GPRS..")
+
+            # ensure FONA is registered with cell network
+            attempts = 10
+            while self.network_status != 1:
+                if attempts == 0:
+                    return False
+                if self._debug:
+                    print("* Not registered with network, retrying, ", attempts)
+                time.sleep(5)
+                attempts -= 1
 
             # enable multi connection mode (3,1)
             if not self._send_check_reply(b"AT+CIPMUX=1", reply=REPLY_OK):
@@ -359,6 +369,7 @@ class FONA:
             return self._buf
         # "Unknown"
         return self._buf
+
 
     @property
     def rssi(self):
