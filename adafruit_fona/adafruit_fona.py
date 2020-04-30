@@ -90,6 +90,7 @@ class FONA:
 
         self._uart = uart
         self._rst = rst
+        self._rst.switch_to_output()
         if not self._init_fona():
             raise RuntimeError("Unable to find FONA. Please check connections.")
 
@@ -146,8 +147,8 @@ class FONA:
     # pylint: disable=too-many-branches, too-many-statements
     def _init_fona(self):
         """Initializes FONA module."""
-        # RST module
-        self._rst.switch_to_output()
+
+        # Reset the module
         self._rst.value = True
         time.sleep(0.01)
         self._rst.value = False
@@ -239,9 +240,25 @@ class FONA:
         self._apn_password = password.encode()
         return self._apn, self._apn_username, self._apn_password
 
-    # pylint: disable=too-many-return-statements
     @gprs.setter
     def gprs(self, gprs_on=True):
+        """Sets GPRS configuration.
+        :param bool gprs_on: Turns on GPRS, enabled by default.
+
+        """
+        attempts = 3
+        while not self._set_gprs(gprs_on):
+            if attempts == 0:
+                raise RuntimeError("Unable to establish PDP context.")
+            if self._debug:
+                print("* Not registered with network, retrying, ", attempts)
+            self._set_gprs(False)
+            time.sleep(5)
+            attempts -= 1
+        return True
+
+    # pylint: disable=too-many-return-statements
+    def _set_gprs(self, gprs_on=True):
         """Enables or disables GPRS configuration.
         :param bool gprs_on: Turns on GPRS, enabled by default.
 
@@ -324,7 +341,6 @@ class FONA:
                     b"AT+CIICR", reply=REPLY_OK, timeout=10000
                 ):
                     return False
-
             else:
                 # Disconnect all sockets
                 if not self._send_check_reply(
@@ -341,8 +357,15 @@ class FONA:
                     b"AT+CGATT=0", reply=REPLY_OK, timeout=10000
                 ):
                     return False
+        else:
+            # Reset PDP context to initial state
+            if not self._send_check_reply(
+                b"AT+CIPSHUT", reply=b"SHUT OK", timeout=20000
+            ):
+                return False
 
         return True
+
 
     @property
     def network_status(self):
@@ -619,9 +642,12 @@ class FONA:
                     sock_num, conn_mode, port, dest
                 )
             )
-        
+
         # Query local IP Address
-        self.local_ip
+        if self._debug:
+            print("\t---> AT+CIFSR")
+        self._uart.write(b"AT+CIFSR\r\n")
+        self._read_line()
 
         # Start connection
         self._uart.write(b"AT+CIPSTART=")
