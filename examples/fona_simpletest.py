@@ -34,8 +34,6 @@ fona.configure_gprs((secrets["apn"], secrets["apn_username"], secrets["apn_passw
 # Bring up GPRS
 fona.gprs = True
 
-print("Local IP: ", fona.local_ip)
-
 # Set socket interface
 socket.set_interface(fona)
 

@@ -619,6 +619,9 @@ class FONA:
                     sock_num, conn_mode, port, dest
                 )
             )
+        
+        # Query local IP Address
+        self.local_ip
 
         # Start connection
         self._uart.write(b"AT+CIPSTART=")
