@@ -67,10 +67,6 @@ FONA_HTTP_GET = const(0x00)
 FONA_HTTP_POST = const(0x01)
 FONA_HTTP_HEAD = const(0x02)
 
-# TCP/IP
-TCP_MODE = const(0)
-UDP_MODE = const(1)
-
 FONA_MAX_SOCKETS = const(6)
 
 # pylint: enable=bad-whitespace
@@ -83,6 +79,10 @@ class FONA:
     :param bool debug: Enable debugging output.
 
     """
+    
+    # Connection modes
+    TCP_MODE = const(0)
+    UDP_MODE = const(1)
 
     # pylint: disable=too-many-arguments
     def __init__(self, uart, rst, debug=False):
@@ -513,11 +513,8 @@ class FONA:
         if isinstance(hostname, str):
             hostname = bytes(hostname, "utf-8")
 
-        self._uart.write(b'AT+CDNSGIP=')
-        self._uart.write(b'"')
-        self._uart.write(hostname)
-        self._uart.write(b'"')
-        self._uart.write(b"\r\n")
+        self._uart.write(b'AT+CDNSGIP="' + hostname + b'"\r\n')
+
 
         if not self._expect_reply(REPLY_OK):
             print("retin")
