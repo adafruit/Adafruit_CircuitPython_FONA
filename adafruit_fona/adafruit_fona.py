@@ -337,9 +337,7 @@ class FONA:
             self._send_check_reply(b"AT+SAPBR=1,1", reply=b"", timeout=100000)
 
             # Bring up wireless connection
-            if not self._send_check_reply(
-                b"AT+CIICR", reply=REPLY_OK, timeout=10000
-            ):
+            if not self._send_check_reply(b"AT+CIICR", reply=REPLY_OK, timeout=10000):
                 return False
 
         else:
@@ -356,13 +354,10 @@ class FONA:
                 return False
 
             # detach from gprs service
-            if not self._send_check_reply(
-                b"AT+CGATT=0", reply=REPLY_OK, timeout=10000
-            ):
+            if not self._send_check_reply(b"AT+CGATT=0", reply=REPLY_OK, timeout=10000):
                 return False
 
         return True
-
 
     @property
     def network_status(self):
@@ -389,7 +384,6 @@ class FONA:
             return self._buf
         # "Unknown"
         return self._buf
-
 
     @property
     def rssi(self):
@@ -471,8 +465,12 @@ class FONA:
         """
         if self._debug:
             print("* Setting GPS")
-        if not (self._fona_type == FONA_3G_A or self._fona_type == FONA_3G_E or
-                    self._fona_type == FONA_808_V1 or self._fona_type == FONA_808_V2):
+        if not (
+            self._fona_type == FONA_3G_A
+            or self._fona_type == FONA_3G_E
+            or self._fona_type == FONA_808_V1
+            or self._fona_type == FONA_808_V2
+        ):
             raise TypeError("GPS unsupported for this FONA module.")
 
         # check if already enabled or disabled
