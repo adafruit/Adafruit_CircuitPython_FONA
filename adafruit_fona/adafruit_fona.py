@@ -250,9 +250,10 @@ class FONA:
         while not self._set_gprs(gprs_on):
             if attempts == 0:
                 raise RuntimeError("Unable to establish PDP context.")
+            elif attempts < 2:
+                self._set_gprs(False)
             if self._debug:
                 print("* Not registered with network, retrying, ", attempts)
-            self._set_gprs(False)
             time.sleep(5)
             attempts -= 1
         return True
@@ -297,70 +298,66 @@ class FONA:
             ):
                 return False
 
-            if self._apn is not None:
-                # Send command AT+SAPBR=3,1,"APN","<apn value>"
-                # where <apn value> is the configured APN value.
-                self._send_check_reply_quoted(
-                    b'AT+SAPBR=3,1,"APN",', self._apn, REPLY_OK, 10000
-                )
+            # Send command AT+SAPBR=3,1,"APN","<apn value>"
+            # where <apn value> is the configured APN value.
+            self._send_check_reply_quoted(
+                b'AT+SAPBR=3,1,"APN",', self._apn, REPLY_OK, 10000
+            )
 
-                # send AT+CSTT,"apn","user","pass"
-                if self._debug:
-                    print("setting APN...")
-                self._uart.reset_input_buffer()
+            # send AT+CSTT,"apn","user","pass"
+            if self._debug:
+                print("setting APN...")
+            self._uart.reset_input_buffer()
 
-                self._uart.write(b'AT+CSTT="' + self._apn)
+            self._uart.write(b'AT+CSTT="' + self._apn)
 
-                if self._apn_username is not None:
-                    self._uart.write(b'","' + self._apn_username)
+            if self._apn_username is not None:
+                self._uart.write(b'","' + self._apn_username)
 
-                if self._apn_password is not None:
-                    self._uart.write(b'","' + self._apn_password)
-                self._uart.write(b'"\r\n')
+            if self._apn_password is not None:
+                self._uart.write(b'","' + self._apn_password)
+            self._uart.write(b'"\r\n')
 
-                if not self._get_reply(REPLY_OK):
-                    return False
+            if not self._get_reply(REPLY_OK):
+                return False
 
-                # Set username
-                if not self._send_check_reply_quoted(
-                    b'AT+SAPBR=3,1,"USER",', self._apn_username, REPLY_OK, 10000
-                ):
-                    return False
+            # Set username
+            if not self._send_check_reply_quoted(
+                b'AT+SAPBR=3,1,"USER",', self._apn_username, REPLY_OK, 10000
+            ):
+                return False
 
-                # Set password
-                if not self._send_check_reply_quoted(
-                    b'AT+SAPBR=3,1,"PWD",', self._apn_password, REPLY_OK, 100000
-                ):
-                    return False
+            # Set password
+            if not self._send_check_reply_quoted(
+                b'AT+SAPBR=3,1,"PWD",', self._apn_password, REPLY_OK, 100000
+            ):
+                return False
 
-                # Open GPRS context
-                self._send_check_reply(b"AT+SAPBR=1,1", reply=b"", timeout=100000)
+            # Open GPRS context
+            self._send_check_reply(b"AT+SAPBR=1,1", reply=b"", timeout=100000)
 
-                # Bring up wireless connection
-                if not self._send_check_reply(
-                    b"AT+CIICR", reply=REPLY_OK, timeout=10000
-                ):
-                    return False
-            else:
-                # Disconnect all sockets
-                if not self._send_check_reply(
-                    b"AT+CIPSHUT", reply=b"SHUT OK", timeout=20000
-                ):
-                    return False
+            # Bring up wireless connection
+            if not self._send_check_reply(
+                b"AT+CIICR", reply=REPLY_OK, timeout=10000
+            ):
+                return False
 
-                # Close GPRS context
-                if not self._send_check_reply(
-                    b"AT+SAPBR=0,1", reply=REPLY_OK, timeout=10000
-                ):
-                    return False
-                if not self._send_check_reply(
-                    b"AT+CGATT=0", reply=REPLY_OK, timeout=10000
-                ):
-                    return False
         else:
-            # Reset PDP context to initial state
+            # reset pdp state
             if not self._send_check_reply(
                 b"AT+CIPSHUT", reply=b"SHUT OK", timeout=20000
+            ):
+                return False
+
+            # close bearer
+            if not self._send_check_reply(
+                b"AT+SAPBR=0,1", reply=REPLY_OK, timeout=10000
+            ):
+                return False
+
+            # detach from gprs service
+            if not self._send_check_reply(
+                b"AT+CGATT=0", reply=REPLY_OK, timeout=10000
             ):
                 return False
 
@@ -728,6 +725,7 @@ class FONA:
         :param bytes buffer: Bytes to write to socket.
 
         """
+        self._read_line()
         self._read_line()
         assert (
             sock_num < FONA_MAX_SOCKETS
