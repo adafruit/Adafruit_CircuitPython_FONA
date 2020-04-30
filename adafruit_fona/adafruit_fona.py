@@ -250,10 +250,9 @@ class FONA:
         while not self._set_gprs(gprs_on):
             if attempts == 0:
                 raise RuntimeError("Unable to establish PDP context.")
-            elif attempts < 2:
-                self._set_gprs(False)
             if self._debug:
                 print("* Not registered with network, retrying, ", attempts)
+            self._set_gprs(False)
             time.sleep(5)
             attempts -= 1
         return True
@@ -334,7 +333,8 @@ class FONA:
                 return False
 
             # Open GPRS context
-            self._send_check_reply(b"AT+SAPBR=1,1", reply=b"", timeout=100000)
+            if not self._send_check_reply(b"AT+SAPBR=1,1", reply=REPLY_OK, timeout=1850):
+                return False
 
             # Bring up wireless connection
             if not self._send_check_reply(b"AT+CIICR", reply=REPLY_OK, timeout=10000):
