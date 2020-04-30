@@ -68,9 +68,11 @@ FONA_HTTP_POST = const(0x01)
 FONA_HTTP_HEAD = const(0x02)
 
 # TCP/IP
-FONA_TCP_MODE = const(0)
-FONA_UDP_MODE = const(1)
+TCP_MODE = const(0)
+UDP_MODE = const(1)
+
 FONA_MAX_SOCKETS = const(6)
+
 # pylint: enable=bad-whitespace
 
 # pylint: disable=too-many-instance-attributes
@@ -343,6 +345,9 @@ class FONA:
             if not self._send_check_reply(b"AT+CIICR", reply=REPLY_OK, timeout=10000):
                 return False
 
+            # Query local IP
+            if not self.local_ip:
+                return False
         else:
             # reset PDP state
             if not self._send_check_reply(
@@ -504,18 +509,24 @@ class FONA:
         """
         self._read_line()
         if self._debug:
-            print("*** get_host_by_name")
+            print("*** get_host_by_name: ", hostname)
         if isinstance(hostname, str):
             hostname = bytes(hostname, "utf-8")
 
-        self._uart.write(b'AT+CDNSGIP="' + hostname + b'"\r\n')
+        self._uart.write(b'AT+CDNSGIP=')
+        self._uart.write(b'"')
+        self._uart.write(hostname)
+        self._uart.write(b'"')
+        self._uart.write(b"\r\n")
 
         if not self._expect_reply(REPLY_OK):
+            print("retin")
             return False
         # eat the blank line
         self._read_line()
         # parse the 3rd line
         self._read_line()
+        print(self._buf)
 
         self._parse_reply(b"+CDNSGIP:", idx=2)
         return self._buf
@@ -609,9 +620,9 @@ class FONA:
 
         return self._buf
 
-    def socket_connect(self, sock_num, dest, port, conn_mode=FONA_TCP_MODE):
+    def socket_connect(self, sock_num, dest, port, conn_mode=TCP_MODE):
         """Connects to a destination IP address or hostname.
-        By default, we use conn_mode FONA_TCP_MODE but we may also use FONA_UDP_MODE.
+        By default, we use conn_mode TCP_MODE but we may also use UDP_MODE.
         :param int sock_num: Desired socket number
         :param str dest: Destination dest address.
         :param int port: Destination dest port.
@@ -640,7 +651,7 @@ class FONA:
         # Start connection
         self._uart.write(b"AT+CIPSTART=")
         self._uart.write(str(sock_num).encode())
-        if conn_mode == FONA_TCP_MODE:
+        if conn_mode == TCP_MODE:
             if self._debug:
                 print('\t--->AT+CIPSTART="TCP","{}",{}'.format(dest, port))
             self._uart.write(b',"TCP","')
