@@ -157,7 +157,7 @@ class FONA:
 
         if self._debug:
             print("Attempting to open comm with ATs")
-        timeout = 7
+        timeout = 7000
         while timeout > 0:
             if self._send_check_reply(CMD_AT, reply=REPLY_OK):
                 break
@@ -793,7 +793,6 @@ class FONA:
                 print("\t---> {}{}".format(prefix, suffix))
             self._uart.write(prefix + suffix + b"\r\n")
 
-        self._buf = b""
         line = self._read_line(timeout)
 
         if self._debug:
@@ -882,8 +881,9 @@ class FONA:
         else:
             if not self._get_reply(send, timeout=timeout):
                 return False
+
         # validate response
-        if not reply in self._buf:
+        if not reply:
             return False
 
         return True
