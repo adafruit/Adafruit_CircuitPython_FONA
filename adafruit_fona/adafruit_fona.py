@@ -162,8 +162,6 @@ class FONA:
             while self._uart.in_waiting:
                 if self._send_check_reply(CMD_AT, reply=REPLY_OK):
                     break
-
-            #while self._uart.in_waiting:
             if self._send_check_reply(CMD_AT, reply=REPLY_AT):
                 break
             time.sleep(0.5)
@@ -254,7 +252,7 @@ class FONA:
             if attempts == 0:
                 raise RuntimeError("Unable to establish PDP context.")
             if self._debug:
-                print("* Not registered with network, retrying, ", attempts)
+                print("* Unable to bringup network, retrying, ", attempts)
             self._set_gprs(False)
             attempts -= 1
             time.sleep(5)
@@ -277,8 +275,8 @@ class FONA:
                     return False
                 if self._debug:
                     print("* Not registered with network, retrying, ", attempts)
-                time.sleep(5)
                 attempts -= 1
+                time.sleep(5)
 
             # enable multi connection mode (3,1)
             if not self._send_check_reply(b"AT+CIPMUX=1", reply=REPLY_OK):
@@ -346,20 +344,10 @@ class FONA:
                 return False
 
         else:
-            # reset pdp state
+            # reset PDP state
             if not self._send_check_reply(
                 b"AT+CIPSHUT", reply=b"SHUT OK", timeout=20000
             ):
-                return False
-
-            # close bearer
-            if not self._send_check_reply(
-                b"AT+SAPBR=0,1", reply=REPLY_OK, timeout=10000
-            ):
-                return False
-
-            # detach from gprs service
-            if not self._send_check_reply(b"AT+CGATT=0", reply=REPLY_OK, timeout=10000):
                 return False
 
         return True
@@ -887,8 +875,6 @@ class FONA:
 
         # validate response
         if not self._buf == reply:
-            print("buf: ", self._buf, end="")
-            print(" reply: ", reply)
             return False
 
         return True
