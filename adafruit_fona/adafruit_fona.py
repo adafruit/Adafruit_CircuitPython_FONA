@@ -159,8 +159,11 @@ class FONA:
             print("Attempting to open comm with ATs")
         timeout = 7000
         while timeout > 0:
-            if self._send_check_reply(CMD_AT, reply=REPLY_OK):
-                break
+            while self._uart.in_waiting:
+                if self._send_check_reply(CMD_AT, reply=REPLY_OK):
+                    break
+
+            #while self._uart.in_waiting:
             if self._send_check_reply(CMD_AT, reply=REPLY_AT):
                 break
             time.sleep(0.5)
@@ -246,15 +249,15 @@ class FONA:
         :param bool gprs_on: Turns on GPRS, enabled by default.
 
         """
-        attempts = 3
+        attempts = 5
         while not self._set_gprs(gprs_on):
             if attempts == 0:
                 raise RuntimeError("Unable to establish PDP context.")
             if self._debug:
                 print("* Not registered with network, retrying, ", attempts)
             self._set_gprs(False)
-            time.sleep(5)
             attempts -= 1
+            time.sleep(5)
         return True
 
     # pylint: disable=too-many-return-statements
@@ -280,13 +283,15 @@ class FONA:
             # enable multi connection mode (3,1)
             if not self._send_check_reply(b"AT+CIPMUX=1", reply=REPLY_OK):
                 return False
+            self._read_line()
 
             # enable receive data manually (7,2)
             if not self._send_check_reply(b"AT+CIPRXGET=1", reply=REPLY_OK):
                 return False
 
             # disconnect all sockets
-            self._send_check_reply(b"AT+CIPSHUT", reply=b"SHUT OK", timeout=20000)
+            if not self._send_check_reply(b"AT+CIPSHUT", reply=b"SHUT OK", timeout=20000):
+                return False
 
             if not self._send_check_reply(b"AT+CGATT=1", reply=REPLY_OK, timeout=10000):
                 return False
@@ -448,13 +453,13 @@ class FONA:
         self._set_gps(enable_gps)
 
         # Wait for a GPS fix
-        if not self.gps == 3:
+        while self.gps != 3:
             if self._debug:
                 print("\t* GPS fix not found, retrying, ", failure_count)
             failure_count += 1
-            time.sleep(5)
             if failure_count >= attempts:
-                return -1
+                return False
+            time.sleep(1)
 
         return True
 
@@ -881,7 +886,9 @@ class FONA:
                 return False
 
         # validate response
-        if not reply:
+        if not self._buf == reply:
+            print("buf: ", self._buf, end="")
+            print(" reply: ", reply)
             return False
 
         return True
