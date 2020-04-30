@@ -21,26 +21,18 @@ uart = busio.UART(board.TX, board.RX, baudrate=4800)
 rst = digitalio.DigitalInOut(board.D4)
 
 # Initialize FONA module (this may take a few seconds)
-fona = FONA(uart, rst)
+fona = FONA(uart, rst, debug=True)
 
 print("Adafruit FONA WebClient Test")
 
 # Enable GPS
 fona.gps = True
-while fona.gps != 3:
-    print("Waiting for GPS fix, retrying...")
-    time.sleep(5)
 
 # Bring up cellular connection
-fona.set_gprs((secrets["apn"], secrets["apn_username"], secrets["apn_password"]))
-while fona.network_status != 1:
-    print("Not registered to a network, waiting...")
-    time.sleep(5)
-time.sleep(5)
+fona.configure_gprs((secrets["apn"], secrets["apn_username"], secrets["apn_password"]))
 
 # Bring up GPRS
 fona.gprs = True
-time.sleep(6)
 
 print("Local IP: ", fona.local_ip)
 
