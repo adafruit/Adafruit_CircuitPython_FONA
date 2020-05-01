@@ -485,7 +485,6 @@ class FONA:
             self._read_line()
             if self._fona_type == FONA_808_V2:
                 # try GNS
-                print("trying GNS...")
                 if not self._send_check_reply(b"AT+CGNSPWR=1", reply=REPLY_OK):
                     return False
             else:
