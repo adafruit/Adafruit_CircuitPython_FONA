@@ -556,7 +556,7 @@ class FONA:
         # read out the rest of the responses
         for _ in range(allocated_socket, FONA_MAX_SOCKETS):
             self._read_line(100)
-        return sock
+        return allocated_socket
 
     def remote_ip(self, sock_num):
         """Returns the IP address of the host who sent the current incoming packet.
