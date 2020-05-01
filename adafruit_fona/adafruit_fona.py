@@ -528,19 +528,26 @@ class FONA:
 
     ### Socket API (TCP, UDP) ###
 
-    def get_socket(self, sockets):
-        """Returns the first avaliable (unused) socket
-        by the socket module.
+    def get_socket(self):
+        """Returns an avaliable socket (INITIAL or CLOSED state).
 
         """
         if self._debug:
             print("*** Allocating Socket")
-        sock = 0
+
+        self._uart.write(b"AT+CIPSTATUS\r\n")
+        self._read_line(100) # OK
+        self._read_line(100) # table header
+
         for sock in range(0, FONA_MAX_SOCKETS):
-            if sock not in sockets:
+            # parse and check for INITIAL client state
+            self._read_line(100)
+            self._parse_reply(b'C:', idx=5)
+            if self._buf.strip('\"') == "INITIAL" or self._buf.strip('\"') == "CLOSED":
                 break
-        if self._debug:
-            print("Allocated socket #", sock)
+        # read out the rest of the responses
+        for _ in range(sock, FONA_MAX_SOCKETS):
+            self._read_line(100)
         return sock
 
     def remote_ip(self, sock_num):
