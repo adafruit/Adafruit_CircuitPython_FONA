@@ -210,7 +210,7 @@ class socket:
 
     def readline(self):
         """Attempt to return as many bytes as we can up to but not including '\r\n'"""
-        print("Socket readline")
+        # print("Socket readline")
         stamp = time.monotonic()
         while b"\r\n" not in self._buffer:
             # there's no line already in there, read some more

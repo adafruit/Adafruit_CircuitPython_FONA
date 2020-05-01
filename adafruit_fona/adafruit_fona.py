@@ -607,7 +607,6 @@ class FONA:
         :param int sock_num: Desired socket to return bytes available from.
 
         """
-        self._read_line()
         assert (
             sock_num < FONA_MAX_SOCKETS
         ), "Provided socket exceeds the maximum number of \
@@ -617,10 +616,14 @@ class FONA:
             b"+CIPRXGET: 4," + str(sock_num).encode() + b",",
         ):
             return False
+        data = self._buf
         if self._debug:
             print("\t {} bytes available.".format(self._buf))
 
-        return self._buf
+        self._read_line()
+        self._read_line()
+
+        return data
 
     def socket_connect(self, sock_num, dest, port, conn_mode=TCP_MODE):
         """Connects to a destination IP address or hostname.
