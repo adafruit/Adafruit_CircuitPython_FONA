@@ -40,9 +40,7 @@ fona.gprs = True
 requests.set_socket(cellular_socket, fona)
 
 print("My IP address is:", fona.local_ip)
-print(
-    "IP lookup adafruit.com: %s" % fona.get_host_by_name("adafruit.com")
-)
+print("IP lookup adafruit.com: %s" % fona.get_host_by_name("adafruit.com"))
 
 # fona._debug = True
 print("Fetching text from", TEXT_URL)

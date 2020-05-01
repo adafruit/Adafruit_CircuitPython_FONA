@@ -35,6 +35,7 @@ from micropython import const
 
 _the_interface = None  # pylint: disable=invalid-name
 
+
 def set_interface(iface):
     """Helper to set the global internet interface."""
     global _the_interface  # pylint: disable=global-statement, invalid-name
@@ -83,7 +84,8 @@ def gethostbyname(hostname):
     :param str hostname: Desired hostname.
     """
     addr = _the_interface.get_host_by_name(hostname)
-    return addr.strip('\"')
+    return addr.strip('"')
+
 
 # pylint: disable=invalid-name, redefined-builtin
 class socket:
@@ -107,23 +109,19 @@ class socket:
         SOCKETS.append(self._socknum)
         self.settimeout(self._timeout)
 
-
     @property
     def socknum(self):
         """Returns the socket object's socket number."""
         return self._socknum
-
 
     @property
     def connected(self):
         """Returns whether or not we are connected to the socket."""
         return _the_interface.socket_status(self.socknum)
 
-
     def getpeername(self):
         """Return the remote address to which the socket is connected."""
         return _the_interface.remote_ip(self.socknum)
-
 
     def inet_aton(self, ip_string):
         """Convert an IPv4 address from dotted-quad string format.
@@ -134,7 +132,6 @@ class socket:
         self._buffer = [int(item) for item in ip_string.split(".")]
         self._buffer = bytearray(self._buffer)
         return self._buffer
-
 
     def connect(self, address, conn_mode=None):
         """Connect to a remote socket at address. (The format of address depends

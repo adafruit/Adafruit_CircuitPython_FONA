@@ -79,7 +79,7 @@ class FONA:
     :param bool debug: Enable debugging output.
 
     """
-    
+
     # Connection modes
     TCP_MODE = const(0)
     UDP_MODE = const(1)
@@ -290,7 +290,9 @@ class FONA:
                 return False
 
             # disconnect all sockets
-            if not self._send_check_reply(b"AT+CIPSHUT", reply=b"SHUT OK", timeout=20000):
+            if not self._send_check_reply(
+                b"AT+CIPSHUT", reply=b"SHUT OK", timeout=20000
+            ):
                 return False
 
             if not self._send_check_reply(b"AT+CGATT=1", reply=REPLY_OK, timeout=10000):
@@ -338,7 +340,9 @@ class FONA:
                 return False
 
             # Open GPRS context
-            if not self._send_check_reply(b"AT+SAPBR=1,1", reply=REPLY_OK, timeout=1850):
+            if not self._send_check_reply(
+                b"AT+SAPBR=1,1", reply=REPLY_OK, timeout=1850
+            ):
                 return False
 
             # Bring up wireless connection
@@ -514,7 +518,9 @@ class FONA:
 
         if self._debug:
             print("\t---> AT+CDNSGIP=", hostname)
-        if not self._send_check_reply(b'AT+CDNSGIP="' + hostname + b'"\r\n', reply=REPLY_OK):
+        if not self._send_check_reply(
+            b'AT+CDNSGIP="' + hostname + b'"\r\n', reply=REPLY_OK
+        ):
             return False
 
         # attempt to parse a response
@@ -536,14 +542,14 @@ class FONA:
             print("*** Allocating Socket")
 
         self._uart.write(b"AT+CIPSTATUS\r\n")
-        self._read_line(100) # OK
-        self._read_line(100) # table header
+        self._read_line(100)  # OK
+        self._read_line(100)  # table header
 
         for sock in range(0, FONA_MAX_SOCKETS):
             # parse and check for INITIAL client state
             self._read_line(100)
-            self._parse_reply(b'C:', idx=5)
-            if self._buf.strip('\"') == "INITIAL" or self._buf.strip('\"') == "CLOSED":
+            self._parse_reply(b"C:", idx=5)
+            if self._buf.strip('"') == "INITIAL" or self._buf.strip('"') == "CLOSED":
                 break
         # read out the rest of the responses
         for _ in range(sock, FONA_MAX_SOCKETS):
@@ -688,7 +694,7 @@ class FONA:
                                              sockets for the FONA module."
         self._read_line()
 
-        self._uart.write(b"AT+CIPCLOSE="+ str(sock_num).encode() + b",")
+        self._uart.write(b"AT+CIPCLOSE=" + str(sock_num).encode() + b",")
         self._uart.write(str(sock_num).encode() + b"\r\n")
         self._read_line()
         if not self._parse_reply(b"CLOSE OK", idx=0):
