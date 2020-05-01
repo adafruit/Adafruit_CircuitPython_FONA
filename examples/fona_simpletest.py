@@ -27,8 +27,6 @@ rst = digitalio.DigitalInOut(board.D4)
 # Initialize FONA module (this may take a few seconds)
 fona = FONA(uart, rst)
 
-print("Adafruit FONA WebClient Test")
-
 # Enable GPS
 fona.gps = True
 

@@ -506,23 +506,28 @@ class FONA:
         :param str hostname: Destination server.
 
         """
-        self._read_line()
         if self._debug:
             print("*** get_host_by_name: ", hostname)
         if isinstance(hostname, str):
             hostname = bytes(hostname, "utf-8")
 
-        self._uart.write(b'AT+CDNSGIP="' + hostname + b'"\r\n')
+        self._read_line()
+        self._uart.reset_input_buffer()
 
-
-        if not self._expect_reply(REPLY_OK):
-            print("retin")
+        if self._debug:
+            print("\t---> AT+CDNSGIP=", hostname)
+        
+        if not self._send_check_reply(b'AT+CDNSGIP="' + hostname + b'"\r\n', reply=REPLY_OK):
             return False
-        # eat the blank line
-        self._read_line()
-        # parse the 3rd line
-        self._read_line()
 
+#        self._uart.write(b'AT+CDNSGIP="' + hostname + b'"\r\n')
+#        if not self._expect_reply(REPLY_OK):
+#            return False
+
+        # parse the second response
+        self._read_line()
+        if self._debug:
+            print("\t<--- ", self._buf)
         self._parse_reply(b"+CDNSGIP:", idx=2)
         return self._buf
 
