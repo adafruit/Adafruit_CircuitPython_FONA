@@ -69,6 +69,10 @@ FONA_HTTP_HEAD = const(0x02)
 
 FONA_MAX_SOCKETS = const(6)
 
+# Connection modes
+TCP_MODE = const(0)
+UDP_MODE = const(1)
+
 # pylint: enable=bad-whitespace
 
 # pylint: disable=too-many-instance-attributes
@@ -79,10 +83,6 @@ class FONA:
     :param bool debug: Enable debugging output.
 
     """
-
-    # Connection modes
-    TCP_MODE = const(0)
-    UDP_MODE = const(1)
 
     # pylint: disable=too-many-arguments
     def __init__(self, uart, rst, debug=False):
@@ -695,7 +695,7 @@ class FONA:
         self._read_line()
 
         self._uart.write(b"AT+CIPCLOSE=" + str(sock_num).encode() + b",")
-        self._uart.write(str(sock_num).encode() + b"\r\n")
+        self._uart.write(str(quick_close).encode() + b"\r\n")
         self._read_line()
         if not self._parse_reply(b"CLOSE OK", idx=0):
             return False
