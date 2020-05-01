@@ -523,7 +523,6 @@ class FONA:
         self._read_line()
         # parse the 3rd line
         self._read_line()
-        print(self._buf)
 
         self._parse_reply(b"+CDNSGIP:", idx=2)
         return self._buf
