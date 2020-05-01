@@ -69,10 +69,6 @@ FONA_HTTP_HEAD = const(0x02)
 
 FONA_MAX_SOCKETS = const(6)
 
-# Connection modes
-TCP_MODE = const(0)
-UDP_MODE = const(1)
-
 # pylint: enable=bad-whitespace
 
 # pylint: disable=too-many-instance-attributes
@@ -83,6 +79,10 @@ class FONA:
     :param bool debug: Enable debugging output.
 
     """
+
+    # Connection modes
+    TCP_MODE = const(0)
+    UDP_MODE = const(1)
 
     # pylint: disable=too-many-arguments
     def __init__(self, uart, rst, debug=False):
@@ -545,14 +545,16 @@ class FONA:
         self._read_line(100)  # OK
         self._read_line(100)  # table header
 
+        allocated_socket = 0
         for sock in range(0, FONA_MAX_SOCKETS):
             # parse and check for INITIAL client state
             self._read_line(100)
             self._parse_reply(b"C:", idx=5)
             if self._buf.strip('"') == "INITIAL" or self._buf.strip('"') == "CLOSED":
+                allocated_socket = sock
                 break
         # read out the rest of the responses
-        for _ in range(sock, FONA_MAX_SOCKETS):
+        for _ in range(allocated_socket, FONA_MAX_SOCKETS):
             self._read_line(100)
         return sock
 
@@ -662,7 +664,7 @@ class FONA:
         # Start connection
         self._uart.write(b"AT+CIPSTART=")
         self._uart.write(str(sock_num).encode())
-        if conn_mode == TCP_MODE:
+        if conn_mode == 0:
             if self._debug:
                 print('\t--->AT+CIPSTART="TCP","{}",{}'.format(dest, port))
             self._uart.write(b',"TCP","')
