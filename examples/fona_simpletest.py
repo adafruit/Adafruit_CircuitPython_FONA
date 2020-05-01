@@ -44,7 +44,7 @@ print(
     "IP lookup adafruit.com: %s" % fona.get_host_by_name("adafruit.com")
 )
 
-fona._debug = True
+# fona._debug = True
 print("Fetching text from", TEXT_URL)
 r = requests.get(TEXT_URL)
 print("-" * 40)

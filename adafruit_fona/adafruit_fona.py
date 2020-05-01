@@ -686,14 +686,12 @@ class FONA:
             sock_num < FONA_MAX_SOCKETS
         ), "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
-        # eat prv. response
         self._read_line()
-        self._uart.write(b"AT+CIPCLOSE=" + str(sock_num).encode())
-        self._uart.write(b"," + str(quick_close).encode() + b"\r\n")
 
+        self._uart.write(b"AT+CIPCLOSE="+ str(sock_num).encode() + b",")
+        self._uart.write(str(sock_num).encode() + b"\r\n")
         self._read_line()
-        self._parse_reply(b"", idx=1)
-        if not "CLOSE OK" in self._buf:
+        if not self._parse_reply(b"CLOSE OK", idx=0):
             return False
         return True
 
