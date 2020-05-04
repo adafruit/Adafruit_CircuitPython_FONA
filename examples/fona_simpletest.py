@@ -33,6 +33,4 @@ fona._debug = True
 # Enable GSM 
 gsm = GSM(fona, (secrets["apn"], secrets["apn_username"], secrets["apn_password"]))
 
-
-# print("My IP address is:", fona.local_ip)
-# print("IP lookup adafruit.com: %s" % fona.get_host_by_name("adafruit.com"))
+print(gsm.is_connected)

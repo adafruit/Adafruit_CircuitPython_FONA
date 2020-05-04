@@ -76,8 +76,17 @@ class GSM:
         if not self._iface.local_ip:
             raise RuntimeError("Unable to obtain module IP address.")
 
-    def network_attached(self):
-        """Returns if modem is attached to cellular network."""
-        # TODO!
+    @property
+    def is_connected(self):
+        """Returns if attached to GPRS and an IP Addresss was obtained.
+        """
+        if not self._iface.gprs and self._iface.local_ip:
+            return False
+        return True
+
+    def connect(self):
+        """Connect to GPRS network
+        """
+        # TODO
         pass
 
