@@ -2,6 +2,7 @@ import board
 import busio
 import digitalio
 from adafruit_fona.adafruit_fona import FONA
+from adafruit_fona.adafruit_fona_gsm import GSM
 import adafruit_fona.adafruit_fona_socket as cellular_socket
 import adafruit_requests as requests
 
@@ -26,35 +27,12 @@ rst = digitalio.DigitalInOut(board.D4)
 # Initialize FONA module (this may take a few seconds)
 fona = FONA(uart, rst)
 
-# Enable GPS
-fona.gps = True
+# Enable FONA debugging
+fona._debug = True
 
-# Bring up cellular connection
-fona.configure_gprs((secrets["apn"], secrets["apn_username"], secrets["apn_password"]))
+# Enable GSM 
+gsm = GSM(fona, (secrets["apn"], secrets["apn_username"], secrets["apn_password"]))
 
-# Bring up GPRS
-fona.gprs = True
-
-# Initialize a requests object with a socket and cellular interface
-requests.set_socket(cellular_socket, fona)
 
 print("My IP address is:", fona.local_ip)
 print("IP lookup adafruit.com: %s" % fona.get_host_by_name("adafruit.com"))
-
-# fona._debug = True
-print("Fetching text from", TEXT_URL)
-r = requests.get(TEXT_URL)
-print("-" * 40)
-print(r.text)
-print("-" * 40)
-r.close()
-
-print()
-print("Fetching json from", JSON_URL)
-r = requests.get(JSON_URL)
-print("-" * 40)
-print(r.json())
-print("-" * 40)
-r.close()
-
-print("Done!")

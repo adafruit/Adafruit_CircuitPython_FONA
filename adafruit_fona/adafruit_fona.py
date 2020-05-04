@@ -101,6 +101,7 @@ class FONA:
         self._apn_username = None
         self._apn_password = None
 
+
     # pylint: disable=too-many-branches, too-many-statements
     def _init_fona(self):
         """Initializes FONA module."""
@@ -242,9 +243,9 @@ class FONA:
         if self._debug:
             print("\t---> AT+CCID: ")
         self._uart.write(b"AT+CCID\r\n")
-        self._read_line(timeout=2000)  # 6.2.23, 2sec max. response time
+        self._read_line(timeout=2000) #6.2.23, 2sec max. response time
         iccid = self._buf.decode()
-        self._read_line()  # eat 'OK'
+        self._read_line() # eat 'OK'
         return iccid
 
     @property
@@ -256,45 +257,30 @@ class FONA:
             return False
         return self._buf
 
-    def configure_gprs(self, config):
-        """If config provided, sets GPRS configuration to provided tuple in format:
-        (apn_network, apn_username, apn_password)
-
-        """
-        if self._debug:
-            print("* Setting GPRS Config to: ", config)
-        apn, username, password = config
-        self._apn = apn.encode()
-        self._apn_username = username.encode()
-        self._apn_password = password.encode()
-        return self._apn, self._apn_username, self._apn_password
-
     @gprs.setter
-    def gprs(self, gprs_on=True):
-        """Sets GPRS configuration.
-        :param bool gprs_on: Turns on GPRS, enabled by default.
+    def gprs(self, apn=None, enable=True):
+        """Sets up GPRS.
+        :param tuple apn: Tuple containing APN network name, username, and password.
+        :param bool enable: Enables or disables GPRS.
 
         """
-        attempts = 5
-        while not self._set_gprs(gprs_on):
-            if attempts == 0:
-                raise RuntimeError("Unable to establish PDP context.")
-            if self._debug:
-                print("* Unable to bringup network, retrying, ", attempts)
-            self._set_gprs(False)
-            attempts -= 1
-            time.sleep(5)
-        return True
+        return self._set_gprs(apn, enable)
 
     # pylint: disable=too-many-return-statements
-    def _set_gprs(self, gprs_on=True):
-        """Enables or disables GPRS configuration.
-        :param bool gprs_on: Turns on GPRS, enabled by default.
+    def _set_gprs(self, apn=None, enable=True):
+        """Sets and configures GPRS. 
+        :param bool enable: Enables or disables GPRS.
 
         """
-        if gprs_on:
+        if enable:
             if self._debug:
                 print("* Enabling GPRS..")
+
+            apn_name, apn_user, apn_pass = apn
+
+            apn_name = apn_name.encode()
+            apn_user = apn_user.encode()
+            apn_pass = apn_pass.encode()
 
             # ensure FONA is registered with cell network
             attempts = 10
@@ -333,7 +319,7 @@ class FONA:
             # Send command AT+SAPBR=3,1,"APN","<apn value>"
             # where <apn value> is the configured APN value.
             self._send_check_reply_quoted(
-                b'AT+SAPBR=3,1,"APN",', self._apn, REPLY_OK, 10000
+                b'AT+SAPBR=3,1,"APN",', apn_name, REPLY_OK, 10000
             )
 
             # send AT+CSTT,"apn","user","pass"
@@ -341,13 +327,13 @@ class FONA:
                 print("setting APN...")
             self._uart.reset_input_buffer()
 
-            self._uart.write(b'AT+CSTT="' + self._apn)
+            self._uart.write(b'AT+CSTT="' + apn_name)
 
-            if self._apn_username is not None:
-                self._uart.write(b'","' + self._apn_username)
+            if apn_user is not None:
+                self._uart.write(b'","' + apn_user)
 
-            if self._apn_password is not None:
-                self._uart.write(b'","' + self._apn_password)
+            if apn_pass is not None:
+                self._uart.write(b'","' + apn_pass)
             self._uart.write(b'"\r\n')
 
             if not self._get_reply(REPLY_OK):
@@ -355,13 +341,13 @@ class FONA:
 
             # Set username
             if not self._send_check_reply_quoted(
-                b'AT+SAPBR=3,1,"USER",', self._apn_username, REPLY_OK, 10000
+                b'AT+SAPBR=3,1,"USER",', apn_user, REPLY_OK, 10000
             ):
                 return False
 
             # Set password
             if not self._send_check_reply_quoted(
-                b'AT+SAPBR=3,1,"PWD",', self._apn_password, REPLY_OK, 100000
+                b'AT+SAPBR=3,1,"PWD",', apn_pass, REPLY_OK, 100000
             ):
                 return False
 
@@ -439,7 +425,7 @@ class FONA:
     def gps(self):
         """Returns the GPS status."""
         if self._debug:
-            print("GPS STATUS")
+            print("* GPS Status")
         if self._fona_type == FONA_808_V2:
             # 808 V2 uses GNS commands and doesn't have an explicit 2D/3D fix status.
             # Instead just look for a fix and if found assume it's a 3D fix.
@@ -462,37 +448,13 @@ class FONA:
             )
         return status
 
+
     @gps.setter
-    def gps(self, enable_gps=False):
-        """Attempts to enable or disable the GPS module.
-        NOTE: This is only for FONA 3G or FONA808 modules.
-        :param bool enable_gps: Enables the GPS module, disabled by default.
-
-        """
-        # failed attempts before returning -1
-        attempts = 10
-        failure_count = 0
-        # Set the GPS module
-        self._set_gps(enable_gps)
-
-        # Wait for a GPS fix
-        while self.gps != 3:
-            if self._debug:
-                print("\t* GPS fix not found, retrying, ", failure_count)
-            failure_count += 1
-            if failure_count >= attempts:
-                return False
-            time.sleep(1)
-
-        return True
-
-    def _set_gps(self, gps_on=False):
+    def gps(self, gps_on=False):
         """Sets GPS module power, parses returned buffer.
         :param bool gps_on: Enables the GPS module, disabled by default.
 
         """
-        if self._debug:
-            print("* Setting GPS")
         if not (
             self._fona_type == FONA_3G_A
             or self._fona_type == FONA_3G_E
