@@ -101,87 +101,11 @@ class FONA:
         self._apn_username = None
         self._apn_password = None
 
-    @property
-    # pylint: disable=too-many-return-statements
-    def version(self):
-        """Returns FONA Version, as a string."""
-        if self._fona_type == FONA_800_L:
-            return "FONA 800L"
-        if self._fona_type == FONA_800_H:
-            return "FONA 800H"
-        if self._fona_type == FONA_808_V1:
-            return "FONA 808 (v1)"
-        if self._fona_type == FONA_808_V2:
-            return "FONA 808 (v2)"
-        if self._fona_type == FONA_3G_A:
-            return "FONA 3G (US)"
-        if self._fona_type == FONA_3G_E:
-            return "FONA 3G (EU)"
-        return -1
-
-    @property
-    def iemi(self):
-        """Returns FONA module's IEMI number."""
-        self._buf = b""
-        self._uart.reset_input_buffer()
-
-        if self._debug:
-            print("\t---> ", "AT+GSN")
-        self._uart.write(b"AT+GSN\r\n")
-        self._read_line(multiline=True)
-        iemi = self._buf[0:15]
-        return iemi.decode("utf-8")
-
-    @property
-    def local_ip(self):
-        """Returns the local IP Address."""
-        if self._debug:
-            print("\t---> AT+CIFSR")
-
-        self._uart.write(b"AT+CIFSR\r\n")
-        self._read_line()
-        return self.pretty_ip(self._buf)
-
-    @property
-    def iccid(self):
-        """Returns SIM Card's ICCID number as a string."""
-        if self._debug:
-            print("\t---> AT+CCID: ")
-        self._uart.write(b"AT+CCID\r\n")
-        self._read_line(timeout=2000)  # 6.2.23, 2sec max. response time
-        iccid = self._buf.decode()
-        self._read_line()  # eat 'OK'
-        return iccid
-
-    def factory_reset(self):
-        """Resets modem to factory configuration."""
-        if self._debug:
-            print("\t---> ATZ")
-        self._uart.write(b"ATZ\r\n")
-
-        if not self._expect_reply(REPLY_OK):
-            return False
-        return True
-
-    def pretty_ip(self, ip):  # pylint: disable=no-self-use, invalid-name
-        """Converts a bytearray IP address to a dotted-quad string for printing"""
-        return "%d.%d.%d.%d" % (ip[0], ip[1], ip[2], ip[3])
-
-    def unpretty_ip(self, ip):  # pylint: disable=no-self-use, invalid-name
-        """Converts a dotted-quad string to a bytearray IP address"""
-        octets = [int(x) for x in ip.split(".")]
-        return bytes(octets)
-
     # pylint: disable=too-many-branches, too-many-statements
     def _init_fona(self):
         """Initializes FONA module."""
 
-        # Reset the module
-        self._rst.value = True
-        time.sleep(0.01)
-        self._rst.value = False
-        time.sleep(0.1)
-        self._rst.value = True
+        self.reset()
 
         if self._debug:
             print("Attempting to open comm with ATs")
@@ -246,6 +170,82 @@ class FONA:
             if self._buf.find(b"SIM800H") != -1:
                 self._fona_type = FONA_800_H
         return True
+
+    def factory_reset(self):
+        """Resets modem to factory configuration."""
+        if self._debug:
+            print("\t---> ATZ")
+        self._uart.write(b"ATZ\r\n")
+
+        if not self._expect_reply(REPLY_OK):
+            return False
+        return True
+
+    def reset(self):
+        """Performs a hardware reset on the modem.
+        NOTE: This may take a few seconds to complete.
+
+        """
+        if self._debug:
+            print("* Resetting modem.")
+        # Reset the module
+        self._rst.value = True
+        time.sleep(0.01)
+        self._rst.value = False
+        time.sleep(0.1)
+        self._rst.value = True
+
+    @property
+    # pylint: disable=too-many-return-statements
+    def version(self):
+        """Returns FONA Version, as a string."""
+        if self._fona_type == FONA_800_L:
+            return "FONA 800L"
+        if self._fona_type == FONA_800_H:
+            return "FONA 800H"
+        if self._fona_type == FONA_808_V1:
+            return "FONA 808 (v1)"
+        if self._fona_type == FONA_808_V2:
+            return "FONA 808 (v2)"
+        if self._fona_type == FONA_3G_A:
+            return "FONA 3G (US)"
+        if self._fona_type == FONA_3G_E:
+            return "FONA 3G (EU)"
+        return -1
+
+    @property
+    def iemi(self):
+        """Returns FONA module's IEMI number."""
+        self._buf = b""
+        self._uart.reset_input_buffer()
+
+        if self._debug:
+            print("\t---> ", "AT+GSN")
+        self._uart.write(b"AT+GSN\r\n")
+        self._read_line(multiline=True)
+        iemi = self._buf[0:15]
+        return iemi.decode("utf-8")
+
+    @property
+    def local_ip(self):
+        """Returns the local IP Address."""
+        if self._debug:
+            print("\t---> AT+CIFSR")
+
+        self._uart.write(b"AT+CIFSR\r\n")
+        self._read_line()
+        return self.pretty_ip(self._buf)
+
+    @property
+    def iccid(self):
+        """Returns SIM Card's ICCID number as a string."""
+        if self._debug:
+            print("\t---> AT+CCID: ")
+        self._uart.write(b"AT+CCID\r\n")
+        self._read_line(timeout=2000)  # 6.2.23, 2sec max. response time
+        iccid = self._buf.decode()
+        self._read_line()  # eat 'OK'
+        return iccid
 
     @property
     def gprs(self):
@@ -557,6 +557,15 @@ class FONA:
         if self._debug:
             print("\t<--- ", self._buf)
         return self._buf
+
+    def pretty_ip(self, ip):  # pylint: disable=no-self-use, invalid-name
+        """Converts a bytearray IP address to a dotted-quad string for printing"""
+        return "%d.%d.%d.%d" % (ip[0], ip[1], ip[2], ip[3])
+
+    def unpretty_ip(self, ip):  # pylint: disable=no-self-use, invalid-name
+        """Converts a dotted-quad string to a bytearray IP address"""
+        octets = [int(x) for x in ip.split(".")]
+        return bytes(octets)
 
     ### Socket API (TCP, UDP) ###
 
