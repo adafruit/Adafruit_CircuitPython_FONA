@@ -73,8 +73,8 @@ class GSM:
             time.sleep(5)
 
         # Query local IP
-        # TODO
-        print("IP: ", self._iface.local_ip)
+        if not self._iface.local_ip:
+            raise RuntimeError("Unable to obtain module IP address.")
 
     def network_attached(self):
         """Returns if modem is attached to cellular network."""

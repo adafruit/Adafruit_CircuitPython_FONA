@@ -228,7 +228,7 @@ class FONA:
             print("\t---> AT+CIFSR")
 
         self._uart.write(b"AT+CIFSR\r\n")
-        print(self._buf)
+        self._read_line()
         return self.pretty_ip(self._buf)
 
     @property
