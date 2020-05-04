@@ -71,7 +71,7 @@ FONA_MAX_SOCKETS = const(6)
 
 # pylint: enable=bad-whitespace
 
-# pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-instance-attributes, too-many-public-methods
 class FONA:
     """CircuitPython FONA module interface.
     :param ~busio.uart UART: FONA UART connection.
@@ -148,10 +148,20 @@ class FONA:
         if self._debug:
             print("\t---> AT+CCID: ")
         self._uart.write(b"AT+CCID\r\n")
-        self._read_line(timeout=2000) #6.2.23, 2sec max. response time
+        self._read_line(timeout=2000)  # 6.2.23, 2sec max. response time
         iccid = self._buf.decode()
-        self._read_line() # eat 'OK'
+        self._read_line()  # eat 'OK'
         return iccid
+
+    def factory_reset(self):
+        """Resets modem to factory configuration."""
+        if self._debug:
+            print("\t---> ATZ")
+        self._uart.write(b"ATZ\r\n")
+
+        if not self._expect_reply(REPLY_OK):
+            return False
+        return True
 
     def pretty_ip(self, ip):  # pylint: disable=no-self-use, invalid-name
         """Converts a bytearray IP address to a dotted-quad string for printing"""
@@ -236,7 +246,6 @@ class FONA:
             if self._buf.find(b"SIM800H") != -1:
                 self._fona_type = FONA_800_H
         return True
-
 
     @property
     def gprs(self):
