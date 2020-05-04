@@ -31,36 +31,53 @@ Interface for 2G GSM cellular modems such as the Adafruit FONA808.
 import time
 
 class GSM:
-    def __init__(self, fona, apn):
+    def __init__(self, fona, apn, debug=True):
         """Initializes interface with 2G GSM modem.
         :param adafruit_fona fona: Adafruit FONA module. 
         :param tuple apn: Tuple containing APN name, (optional) APN username,
                             and APN password.
+        :param bool debug: Enable verbose debug output.
 
         """
         self._iface = fona
-        # Attempt to enable GPS module and obtain GPS fix
-        self._iface.gps = True
+        self._debug = debug
 
+        # Attempt to enable GPS module and obtain GPS fix
         attempts = 10
+        self._iface.gps = True
         while not self._iface.gps == 3:
             if attempts < 0:
                 raise RuntimeError("Unable to establish GPS fix.")
             attempts -= 1
+            time.sleep(0.5)
+
+        # Check if FONA is registered to GSM network
+        attempts = 30
+        while self._iface.network_status != 1:
+            if attempts == 0:
+                raise TimeoutError("Not registered with GSM network.")
+            if self._debug:
+                print("* Not registered with network, retrying, ", attempts)
+            attempts -= 1
+            time.sleep(1)
 
         # Set GPRS
-        self._iface.gprs(True, apn)
         attempts = 5
-
-        while not self.gprs(apn, True):
+        while not self._iface.set_gprs(apn, True):
             if attempts == 0:
                 raise RuntimeError("Unable to establish PDP context.")
             if self._debug:
                 print("* Unable to bringup network, retrying, ", attempts)
-            self._iface.gprs(apn, False)
+            self._iface.set_gprs(apn, False)
             attempts -= 1
             time.sleep(5)
 
+        # Query local IP
+        # TODO
+        print("IP: ", self._iface.local_ip)
+
     def network_attached(self):
         """Returns if modem is attached to cellular network."""
+        # TODO!
+        pass
 

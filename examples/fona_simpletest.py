@@ -34,5 +34,5 @@ fona._debug = True
 gsm = GSM(fona, (secrets["apn"], secrets["apn_username"], secrets["apn_password"]))
 
 
-print("My IP address is:", fona.local_ip)
-print("IP lookup adafruit.com: %s" % fona.get_host_by_name("adafruit.com"))
+# print("My IP address is:", fona.local_ip)
+# print("IP lookup adafruit.com: %s" % fona.get_host_by_name("adafruit.com"))

@@ -96,12 +96,6 @@ class FONA:
         if not self._init_fona():
             raise RuntimeError("Unable to find FONA. Please check connections.")
 
-        # GPRS
-        self._apn = None
-        self._apn_username = None
-        self._apn_password = None
-
-
     # pylint: disable=too-many-branches, too-many-statements
     def _init_fona(self):
         """Initializes FONA module."""
@@ -234,7 +228,7 @@ class FONA:
             print("\t---> AT+CIFSR")
 
         self._uart.write(b"AT+CIFSR\r\n")
-        self._read_line()
+        print(self._buf)
         return self.pretty_ip(self._buf)
 
     @property
@@ -257,40 +251,21 @@ class FONA:
             return False
         return self._buf
 
-    @gprs.setter
-    def gprs(self, apn=None, enable=True):
-        """Sets up GPRS.
-        :param tuple apn: Tuple containing APN network name, username, and password.
-        :param bool enable: Enables or disables GPRS.
-
-        """
-        return self._set_gprs(apn, enable)
-
     # pylint: disable=too-many-return-statements
-    def _set_gprs(self, apn=None, enable=True):
+    def set_gprs(self, apn=None, enable=True):
         """Sets and configures GPRS. 
         :param bool enable: Enables or disables GPRS.
 
         """
         if enable:
             if self._debug:
-                print("* Enabling GPRS..")
+                print("* Enabling GPRS...")
 
             apn_name, apn_user, apn_pass = apn
 
             apn_name = apn_name.encode()
             apn_user = apn_user.encode()
             apn_pass = apn_pass.encode()
-
-            # ensure FONA is registered with cell network
-            attempts = 10
-            while self.network_status != 1:
-                if attempts == 0:
-                    return False
-                if self._debug:
-                    print("* Not registered with network, retrying, ", attempts)
-                attempts -= 1
-                time.sleep(5)
 
             # enable multi connection mode (3,1)
             if not self._send_check_reply(b"AT+CIPMUX=1", reply=REPLY_OK):
@@ -361,10 +336,9 @@ class FONA:
             if not self._send_check_reply(b"AT+CIICR", reply=REPLY_OK, timeout=10000):
                 return False
 
-            # Query local IP
-            if not self.local_ip:
-                return False
         else:
+            if self._debug:
+                print("* Disabling GPRS...")
             # reset PDP state
             if not self._send_check_reply(
                 b"AT+CIPSHUT", reply=b"SHUT OK", timeout=20000
