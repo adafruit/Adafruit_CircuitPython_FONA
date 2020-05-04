@@ -1,14 +1,10 @@
+import time
 import board
 import busio
 import digitalio
 from adafruit_fona.adafruit_fona import FONA
 import adafruit_fona.adafruit_fona_socket as cellular_socket
 import adafruit_requests as requests
-
-print("FONA WebClient Test")
-
-TEXT_URL = "http://wifitest.adafruit.com/testwifi/index.html"
-JSON_URL = "http://api.coindesk.com/v1/bpi/currentprice/USD.json"
 
 # Get GPRS details and more from a secrets.py file
 try:
@@ -24,6 +20,7 @@ uart = busio.UART(board.TX, board.RX, baudrate=4800)
 rst = digitalio.DigitalInOut(board.D4)
 
 # Initialize FONA module (this may take a few seconds)
+print("Initializing FONA")
 fona = FONA(uart, rst)
 
 # Enable GPS
@@ -34,27 +31,30 @@ fona.configure_gprs((secrets["apn"], secrets["apn_username"], secrets["apn_passw
 
 # Bring up GPRS
 fona.gprs = True
+print("FONA initialized")
 
 # Initialize a requests object with a socket and cellular interface
 requests.set_socket(cellular_socket, fona)
 
-print("My IP address is:", fona.local_ip)
-print("IP lookup adafruit.com: %s" % fona.get_host_by_name("adafruit.com"))
+counter = 0
 
-# fona._debug = True
-print("Fetching text from", TEXT_URL)
-r = requests.get(TEXT_URL)
-print("-" * 40)
-print(r.text)
-print("-" * 40)
-r.close()
-
-print()
-print("Fetching json from", JSON_URL)
-r = requests.get(JSON_URL)
-print("-" * 40)
-print(r.json())
-print("-" * 40)
-r.close()
-
-print("Done!")
+while True:
+    print("Posting data...", end="")
+    data = counter
+    feed = "test"
+    payload = {"value": data}
+    response = requests.post(
+        "http://io.adafruit.com/api/v2/"
+        + secrets["aio_username"]
+        + "/feeds/"
+        + feed
+        + "/data",
+        json=payload,
+        headers={"X-AIO-KEY": secrets["aio_key"]},
+    )
+    print(response.json())
+    response.close()
+    counter = counter + 1
+    print("OK")
+    response = None
+    time.sleep(15)

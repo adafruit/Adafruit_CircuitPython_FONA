@@ -84,7 +84,7 @@ def gethostbyname(hostname):
     :param str hostname: Desired hostname.
     """
     addr = _the_interface.get_host_by_name(hostname)
-    return addr
+    return addr.strip('"')
 
 
 # pylint: disable=invalid-name, redefined-builtin
@@ -105,7 +105,7 @@ class socket:
         self._buffer = b""
         self._timeout = 0
 
-        self._socknum = _the_interface.get_socket(SOCKETS)
+        self._socknum = _the_interface.get_socket()
         SOCKETS.append(self._socknum)
         self.settimeout(self._timeout)
 

@@ -67,10 +67,8 @@ FONA_HTTP_GET = const(0x00)
 FONA_HTTP_POST = const(0x01)
 FONA_HTTP_HEAD = const(0x02)
 
-# TCP/IP
-FONA_TCP_MODE = const(0)
-FONA_UDP_MODE = const(1)
 FONA_MAX_SOCKETS = const(6)
+
 # pylint: enable=bad-whitespace
 
 # pylint: disable=too-many-instance-attributes
@@ -82,6 +80,10 @@ class FONA:
 
     """
 
+    # Connection modes
+    TCP_MODE = const(0)
+    UDP_MODE = const(1)
+
     # pylint: disable=too-many-arguments
     def __init__(self, uart, rst, debug=False):
         self._buf = b""  # shared buffer
@@ -90,6 +92,7 @@ class FONA:
 
         self._uart = uart
         self._rst = rst
+        self._rst.switch_to_output()
         if not self._init_fona():
             raise RuntimeError("Unable to find FONA. Please check connections.")
 
@@ -146,8 +149,8 @@ class FONA:
     # pylint: disable=too-many-branches, too-many-statements
     def _init_fona(self):
         """Initializes FONA module."""
-        # RST module
-        self._rst.switch_to_output()
+
+        # Reset the module
         self._rst.value = True
         time.sleep(0.01)
         self._rst.value = False
@@ -156,10 +159,11 @@ class FONA:
 
         if self._debug:
             print("Attempting to open comm with ATs")
-        timeout = 7
+        timeout = 7000
         while timeout > 0:
-            if self._send_check_reply(CMD_AT, reply=REPLY_OK):
-                break
+            while self._uart.in_waiting:
+                if self._send_check_reply(CMD_AT, reply=REPLY_OK):
+                    break
             if self._send_check_reply(CMD_AT, reply=REPLY_AT):
                 break
             time.sleep(0.5)
@@ -226,7 +230,7 @@ class FONA:
             return False
         return self._buf
 
-    def set_gprs(self, config):
+    def configure_gprs(self, config):
         """If config provided, sets GPRS configuration to provided tuple in format:
         (apn_network, apn_username, apn_password)
 
@@ -239,9 +243,25 @@ class FONA:
         self._apn_password = password.encode()
         return self._apn, self._apn_username, self._apn_password
 
-    # pylint: disable=too-many-return-statements
     @gprs.setter
     def gprs(self, gprs_on=True):
+        """Sets GPRS configuration.
+        :param bool gprs_on: Turns on GPRS, enabled by default.
+
+        """
+        attempts = 5
+        while not self._set_gprs(gprs_on):
+            if attempts == 0:
+                raise RuntimeError("Unable to establish PDP context.")
+            if self._debug:
+                print("* Unable to bringup network, retrying, ", attempts)
+            self._set_gprs(False)
+            attempts -= 1
+            time.sleep(5)
+        return True
+
+    # pylint: disable=too-many-return-statements
+    def _set_gprs(self, gprs_on=True):
         """Enables or disables GPRS configuration.
         :param bool gprs_on: Turns on GPRS, enabled by default.
 
@@ -250,16 +270,30 @@ class FONA:
             if self._debug:
                 print("* Enabling GPRS..")
 
+            # ensure FONA is registered with cell network
+            attempts = 10
+            while self.network_status != 1:
+                if attempts == 0:
+                    return False
+                if self._debug:
+                    print("* Not registered with network, retrying, ", attempts)
+                attempts -= 1
+                time.sleep(5)
+
             # enable multi connection mode (3,1)
             if not self._send_check_reply(b"AT+CIPMUX=1", reply=REPLY_OK):
                 return False
+            self._read_line()
 
             # enable receive data manually (7,2)
             if not self._send_check_reply(b"AT+CIPRXGET=1", reply=REPLY_OK):
                 return False
 
             # disconnect all sockets
-            self._send_check_reply(b"AT+CIPSHUT", reply=b"SHUT OK", timeout=20000)
+            if not self._send_check_reply(
+                b"AT+CIPSHUT", reply=b"SHUT OK", timeout=20000
+            ):
+                return False
 
             if not self._send_check_reply(b"AT+CGATT=1", reply=REPLY_OK, timeout=10000):
                 return False
@@ -270,67 +304,60 @@ class FONA:
             ):
                 return False
 
-            if self._apn is not None:
-                # Send command AT+SAPBR=3,1,"APN","<apn value>"
-                # where <apn value> is the configured APN value.
-                self._send_check_reply_quoted(
-                    b'AT+SAPBR=3,1,"APN",', self._apn, REPLY_OK, 10000
-                )
+            # Send command AT+SAPBR=3,1,"APN","<apn value>"
+            # where <apn value> is the configured APN value.
+            self._send_check_reply_quoted(
+                b'AT+SAPBR=3,1,"APN",', self._apn, REPLY_OK, 10000
+            )
 
-                # send AT+CSTT,"apn","user","pass"
-                if self._debug:
-                    print("setting APN...")
-                self._uart.reset_input_buffer()
+            # send AT+CSTT,"apn","user","pass"
+            if self._debug:
+                print("setting APN...")
+            self._uart.reset_input_buffer()
 
-                self._uart.write(b'AT+CSTT="' + self._apn)
+            self._uart.write(b'AT+CSTT="' + self._apn)
 
-                if self._apn_username is not None:
-                    self._uart.write(b'","' + self._apn_username)
+            if self._apn_username is not None:
+                self._uart.write(b'","' + self._apn_username)
 
-                if self._apn_password is not None:
-                    self._uart.write(b'","' + self._apn_password)
-                self._uart.write(b'"\r\n')
+            if self._apn_password is not None:
+                self._uart.write(b'","' + self._apn_password)
+            self._uart.write(b'"\r\n')
 
-                if not self._get_reply(REPLY_OK):
-                    return False
+            if not self._get_reply(REPLY_OK):
+                return False
 
-                # Set username
-                if not self._send_check_reply_quoted(
-                    b'AT+SAPBR=3,1,"USER",', self._apn_username, REPLY_OK, 10000
-                ):
-                    return False
+            # Set username
+            if not self._send_check_reply_quoted(
+                b'AT+SAPBR=3,1,"USER",', self._apn_username, REPLY_OK, 10000
+            ):
+                return False
 
-                # Set password
-                if not self._send_check_reply_quoted(
-                    b'AT+SAPBR=3,1,"PWD",', self._apn_password, REPLY_OK, 100000
-                ):
-                    return False
+            # Set password
+            if not self._send_check_reply_quoted(
+                b'AT+SAPBR=3,1,"PWD",', self._apn_password, REPLY_OK, 100000
+            ):
+                return False
 
-                # Open GPRS context
-                self._send_check_reply(b"AT+SAPBR=1,1", reply=b"", timeout=100000)
+            # Open GPRS context
+            if not self._send_check_reply(
+                b"AT+SAPBR=1,1", reply=REPLY_OK, timeout=1850
+            ):
+                return False
 
-                # Bring up wireless connection
-                if not self._send_check_reply(
-                    b"AT+CIICR", reply=REPLY_OK, timeout=10000
-                ):
-                    return False
+            # Bring up wireless connection
+            if not self._send_check_reply(b"AT+CIICR", reply=REPLY_OK, timeout=10000):
+                return False
 
-            else:
-                # Disconnect all sockets
-                if not self._send_check_reply(
-                    b"AT+CIPSHUT", reply=b"SHUT OK", timeout=20000
-                ):
-                    return False
-
-                # Close GPRS context
-                if not self._send_check_reply(
-                    b"AT+SAPBR=0,1", reply=REPLY_OK, timeout=10000
-                ):
-                    return False
-                if not self._send_check_reply(
-                    b"AT+CGATT=0", reply=REPLY_OK, timeout=10000
-                ):
-                    return False
+            # Query local IP
+            if not self.local_ip:
+                return False
+        else:
+            # reset PDP state
+            if not self._send_check_reply(
+                b"AT+CIPSHUT", reply=b"SHUT OK", timeout=20000
+            ):
+                return False
 
         return True
 
@@ -407,13 +434,34 @@ class FONA:
             raise NotImplementedError(
                 "FONA 808 v1 not currently supported by this library."
             )
-
         return status
 
     @gps.setter
-    def gps(self, gps_on=False):
-        """Enables or disables the GPS module.
+    def gps(self, enable_gps=False):
+        """Attempts to enable or disable the GPS module.
         NOTE: This is only for FONA 3G or FONA808 modules.
+        :param bool enable_gps: Enables the GPS module, disabled by default.
+
+        """
+        # failed attempts before returning -1
+        attempts = 10
+        failure_count = 0
+        # Set the GPS module
+        self._set_gps(enable_gps)
+
+        # Wait for a GPS fix
+        while self.gps != 3:
+            if self._debug:
+                print("\t* GPS fix not found, retrying, ", failure_count)
+            failure_count += 1
+            if failure_count >= attempts:
+                return False
+            time.sleep(1)
+
+        return True
+
+    def _set_gps(self, gps_on=False):
+        """Sets GPS module power, parses returned buffer.
         :param bool gps_on: Enables the GPS module, disabled by default.
 
         """
@@ -441,7 +489,6 @@ class FONA:
             self._read_line()
             if self._fona_type == FONA_808_V2:
                 # try GNS
-                print("trying GNS...")
                 if not self._send_check_reply(b"AT+CGNSPWR=1", reply=REPLY_OK):
                     return False
             else:
@@ -465,38 +512,51 @@ class FONA:
         """
         self._read_line()
         if self._debug:
-            print("*** get_host_by_name")
+            print("*** get_host_by_name: ", hostname)
         if isinstance(hostname, str):
             hostname = bytes(hostname, "utf-8")
 
-        self._uart.write(b'AT+CDNSGIP="' + hostname + b'"\r\n')
-
-        if not self._expect_reply(REPLY_OK):
+        if self._debug:
+            print("\t---> AT+CDNSGIP=", hostname)
+        if not self._send_check_reply(
+            b'AT+CDNSGIP="' + hostname + b'"\r\n', reply=REPLY_OK
+        ):
             return False
-        # eat the blank line
-        self._read_line()
-        # parse the 3rd line
-        self._read_line()
 
-        self._parse_reply(b"+CDNSGIP:", idx=2)
+        # attempt to parse a response
+        self._read_line()
+        while not self._parse_reply(b"+CDNSGIP:", idx=2):
+            self._read_line()
+
+        if self._debug:
+            print("\t<--- ", self._buf)
         return self._buf
 
     ### Socket API (TCP, UDP) ###
 
-    def get_socket(self, sockets):
-        """Returns the first avaliable (unused) socket
-        by the socket module.
+    def get_socket(self):
+        """Returns an avaliable socket (INITIAL or CLOSED state).
 
         """
         if self._debug:
             print("*** Allocating Socket")
-        sock = 0
+
+        self._uart.write(b"AT+CIPSTATUS\r\n")
+        self._read_line(100)  # OK
+        self._read_line(100)  # table header
+
+        allocated_socket = 0
         for sock in range(0, FONA_MAX_SOCKETS):
-            if sock not in sockets:
+            # parse and check for INITIAL client state
+            self._read_line(100)
+            self._parse_reply(b"C:", idx=5)
+            if self._buf.strip('"') == "INITIAL" or self._buf.strip('"') == "CLOSED":
+                allocated_socket = sock
                 break
-        if self._debug:
-            print("Allocated socket #", sock)
-        return sock
+        # read out the rest of the responses
+        for _ in range(allocated_socket, FONA_MAX_SOCKETS):
+            self._read_line(100)
+        return allocated_socket
 
     def remote_ip(self, sock_num):
         """Returns the IP address of the host who sent the current incoming packet.
@@ -555,7 +615,6 @@ class FONA:
         :param int sock_num: Desired socket to return bytes available from.
 
         """
-        self._read_line()
         assert (
             sock_num < FONA_MAX_SOCKETS
         ), "Provided socket exceeds the maximum number of \
@@ -565,14 +624,18 @@ class FONA:
             b"+CIPRXGET: 4," + str(sock_num).encode() + b",",
         ):
             return False
+        data = self._buf
         if self._debug:
             print("\t {} bytes available.".format(self._buf))
 
-        return self._buf
+        self._read_line()
+        self._read_line()
 
-    def socket_connect(self, sock_num, dest, port, conn_mode=FONA_TCP_MODE):
+        return data
+
+    def socket_connect(self, sock_num, dest, port, conn_mode=TCP_MODE):
         """Connects to a destination IP address or hostname.
-        By default, we use conn_mode FONA_TCP_MODE but we may also use FONA_UDP_MODE.
+        By default, we use conn_mode TCP_MODE but we may also use UDP_MODE.
         :param int sock_num: Desired socket number
         :param str dest: Destination dest address.
         :param int port: Destination dest port.
@@ -592,10 +655,16 @@ class FONA:
                 )
             )
 
+        # Query local IP Address
+        if self._debug:
+            print("\t---> AT+CIFSR")
+        self._uart.write(b"AT+CIFSR\r\n")
+        self._read_line()
+
         # Start connection
         self._uart.write(b"AT+CIPSTART=")
         self._uart.write(str(sock_num).encode())
-        if conn_mode == FONA_TCP_MODE:
+        if conn_mode == 0:
             if self._debug:
                 print('\t--->AT+CIPSTART="TCP","{}",{}'.format(dest, port))
             self._uart.write(b',"TCP","')
@@ -625,14 +694,12 @@ class FONA:
             sock_num < FONA_MAX_SOCKETS
         ), "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
-        # eat prv. response
         self._read_line()
-        self._uart.write(b"AT+CIPCLOSE=" + str(sock_num).encode())
-        self._uart.write(b"," + str(quick_close).encode() + b"\r\n")
 
+        self._uart.write(b"AT+CIPCLOSE=" + str(sock_num).encode() + b",")
+        self._uart.write(str(quick_close).encode() + b"\r\n")
         self._read_line()
-        self._parse_reply(b"", idx=1)
-        if not "CLOSE OK" in self._buf:
+        if not self._parse_reply(b"CLOSE OK", idx=0):
             return False
         return True
 
@@ -671,6 +738,7 @@ class FONA:
         :param bytes buffer: Bytes to write to socket.
 
         """
+        self._read_line()
         self._read_line()
         assert (
             sock_num < FONA_MAX_SOCKETS
@@ -738,7 +806,6 @@ class FONA:
                 print("\t---> {}{}".format(prefix, suffix))
             self._uart.write(prefix + suffix + b"\r\n")
 
-        self._buf = b""
         line = self._read_line(timeout)
 
         if self._debug:
@@ -827,8 +894,9 @@ class FONA:
         else:
             if not self._get_reply(send, timeout=timeout):
                 return False
+
         # validate response
-        if not reply in self._buf:
+        if not self._buf == reply:
             return False
 
         return True
