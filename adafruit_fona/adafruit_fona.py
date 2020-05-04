@@ -132,10 +132,6 @@ class FONA:
         iemi = self._buf[0:15]
         return iemi.decode("utf-8")
 
-    def pretty_ip(self, ip):  # pylint: disable=no-self-use, invalid-name
-        """Converts a bytearray IP address to a dotted-quad string for printing"""
-        return "%d.%d.%d.%d" % (ip[0], ip[1], ip[2], ip[3])
-
     @property
     def local_ip(self):
         """Returns the local IP Address."""
@@ -145,6 +141,26 @@ class FONA:
         self._uart.write(b"AT+CIFSR\r\n")
         self._read_line()
         return self.pretty_ip(self._buf)
+
+    @property
+    def iccid(self):
+        """Returns SIM Card's ICCID number as a string."""
+        if self._debug:
+            print("\t---> AT+CCID: ")
+        self._uart.write(b"AT+CCID\r\n")
+        self._read_line(timeout=2000) #6.2.23, 2sec max. response time
+        iccid = self._buf.decode()
+        self._read_line() # eat 'OK'
+        return iccid
+
+    def pretty_ip(self, ip):  # pylint: disable=no-self-use, invalid-name
+        """Converts a bytearray IP address to a dotted-quad string for printing"""
+        return "%d.%d.%d.%d" % (ip[0], ip[1], ip[2], ip[3])
+
+    def unpretty_ip(self, ip):  # pylint: disable=no-self-use, invalid-name
+        """Converts a dotted-quad string to a bytearray IP address"""
+        octets = [int(x) for x in ip.split(".")]
+        return bytes(octets)
 
     # pylint: disable=too-many-branches, too-many-statements
     def _init_fona(self):
@@ -220,6 +236,7 @@ class FONA:
             if self._buf.find(b"SIM800H") != -1:
                 self._fona_type = FONA_800_H
         return True
+
 
     @property
     def gprs(self):
