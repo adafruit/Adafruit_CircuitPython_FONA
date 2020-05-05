@@ -39,4 +39,26 @@ while not gsm.is_connected:
     gsm.connect()
     time.sleep(5)
 
-print("connected!")
+print("My IP address is:", fona.local_ip)
+print("IP lookup adafruit.com: %s" % fona.get_host_by_name("adafruit.com"))
+
+# Initialize a requests object with a socket and cellular interface
+requests.set_socket(cellular_socket, fona)
+
+# fona._debug = True
+print("Fetching text from", TEXT_URL)
+r = requests.get(TEXT_URL)
+print("-" * 40)
+print(r.text)
+print("-" * 40)
+r.close()
+
+print()
+print("Fetching json from", JSON_URL)
+r = requests.get(JSON_URL)
+print("-" * 40)
+print(r.json())
+print("-" * 40)
+r.close()
+
+print("Done!")

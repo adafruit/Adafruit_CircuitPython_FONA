@@ -65,6 +65,21 @@ class GSM:
             attempts -= 1
             time.sleep(1)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self):
+        self.disconnect()
+
+    @property
+    def imei(self):
+        """Returns the GSM modem's IEMI number, as a string."""
+        return self._iface.iemi
+
+    @property
+    def iccid(self):
+        """Returns the SIM card's ICCID, as a string."""
+        return self._iface.iccid
 
     @property
     def is_connected(self):
@@ -77,11 +92,14 @@ class GSM:
         return True
 
     def connect(self):
-        """Connect to GSM network
-
-        """
+        """Connect to GSM network."""
         if self._iface.set_gprs(self._apn, True):
             self._gsm_connected = True
         else:
             # reset context for next connection attempt
             self._iface.set_gprs(self._apn, False)
+
+    def disconnect(self):
+        """Disconnect from GSM network."""
+        self._iface.set_gprs(self._apn, False)
+        self._gsm_connected = False
