@@ -344,6 +344,10 @@ class FONA:
             if not self._send_check_reply(b"AT+CIICR", reply=REPLY_OK, timeout=10000):
                 return False
 
+            # Query local IP
+            if not self.local_ip:
+                return False
+
         else:
             if self._debug:
                 print("* Disabling GPRS...")

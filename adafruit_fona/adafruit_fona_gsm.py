@@ -68,13 +68,16 @@ class GSM:
     def is_connected(self):
         """Returns if attached to GSM and an IP Addresss was obtained.
         """
-        return self._gsm_connected
+        if not self._gsm_connected:
+            return False
+        return True
 
     def connect(self):
         """Connect to GSM network
 
         """
-        if not self._iface.set_gprs(self._apn, True):
+        if self._iface.set_gprs(self._apn, True):
+            self._gsm_connected = True
+        else:
             # reset context for next connection attempt
             self._iface.set_gprs(self._apn, False)
-        self._gsm_connected = True
