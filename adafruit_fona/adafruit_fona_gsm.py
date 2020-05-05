@@ -46,24 +46,8 @@ class GSM:
         self._apn = apn
         self._gsm_connected = False
 
-        # Attempt to enable GPS module and obtain GPS fix
-        attempts = 10
+        # Enable GPS module
         self._iface.gps = True
-        while not self._iface.gps == 3:
-            if attempts < 0:
-                raise RuntimeError("Unable to establish GPS fix.")
-            attempts -= 1
-            time.sleep(0.5)
-
-        # Check if FONA is registered to GSM network
-        attempts = 30
-        while self._iface.network_status != 1:
-            if attempts == 0:
-                raise TimeoutError("Not registered with GSM network.")
-            if self._debug:
-                print("* Not registered with network, retrying, ", attempts)
-            attempts -= 1
-            time.sleep(1)
 
     def __enter__(self):
         return self
@@ -80,6 +64,16 @@ class GSM:
     def iccid(self):
         """Returns the SIM card's ICCID, as a string."""
         return self._iface.iccid
+
+    @property
+    def is_attached(self):
+        """Returns if the modem is attached to the network
+        and the GPS has a fix."""
+        if self._iface.gps == 3:
+            if self._iface.network_status == 1:
+                return True
+        return False
+
 
     @property
     def is_connected(self):

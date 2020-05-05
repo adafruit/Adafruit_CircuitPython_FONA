@@ -34,6 +34,10 @@ fona._debug = True
 # initialize gsm
 gsm = GSM(fona, (secrets["apn"], secrets["apn_username"], secrets["apn_password"]))
 
+while not gsm.is_attached:
+    print("Attaching to network...")
+    time.sleep(0.5)
+
 while not gsm.is_connected:
     print("Connecting to network...")
     gsm.connect()
