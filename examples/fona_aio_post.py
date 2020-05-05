@@ -23,9 +23,6 @@ rst = digitalio.DigitalInOut(board.D4)
 # Initialize FONA module (this may take a few seconds)
 fona = FONA(uart, rst)
 
-# Enable FONA debugging
-fona._debug = True
-
 # initialize gsm
 gsm = GSM(fona, (secrets["apn"], secrets["apn_username"], secrets["apn_password"]))
 

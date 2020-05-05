@@ -28,11 +28,12 @@ Interface for 2G GSM cellular modems such as the Adafruit FONA808.
 * Author(s): Brent Rubell
 
 """
-import time
+
 
 class GSM:
     """Interface for interacting with FONA 2G GSM modems.
     """
+
     def __init__(self, fona, apn):
         """Initializes interface with 2G GSM modem.
         :param adafruit_fona fona: The Adafruit FONA module we are using.
@@ -50,7 +51,7 @@ class GSM:
     def __enter__(self):
         return self
 
-    def __exit__(self):
+    def __exit__(self, exception_type, exception_value, traceback):
         self.disconnect()
 
     @property
@@ -70,7 +71,6 @@ class GSM:
         if self._iface.gps == 3 and self._iface.network_status == 1:
             return True
         return False
-
 
     @property
     def is_connected(self):

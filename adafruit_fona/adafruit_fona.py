@@ -241,9 +241,9 @@ class FONA:
         if self._debug:
             print("\t---> AT+CCID: ")
         self._uart.write(b"AT+CCID\r\n")
-        self._read_line(timeout=2000) #6.2.23, 2sec max. response time
+        self._read_line(timeout=2000)  # 6.2.23, 2sec max. response time
         iccid = self._buf.decode()
-        self._read_line() # eat 'OK'
+        self._read_line()  # eat 'OK'
         return iccid
 
     @property
@@ -433,7 +433,6 @@ class FONA:
                 "FONA 808 v1 not currently supported by this library."
             )
         return status
-
 
     @gps.setter
     def gps(self, gps_on=False):
