@@ -1,3 +1,4 @@
+import time
 import board
 import busio
 import digitalio
@@ -30,8 +31,12 @@ fona = FONA(uart, rst)
 # Enable FONA debugging
 fona._debug = True
 
-# Enable GSM 
+# initialize gsm
 gsm = GSM(fona, (secrets["apn"], secrets["apn_username"], secrets["apn_password"]))
-gsm.connect()
 
-print(gsm.is_connected)
+while not gsm.is_connected:
+    print("Connecting to network...")
+    gsm.connect()
+    time.sleep(5)
+
+print("connected!")

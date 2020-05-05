@@ -249,11 +249,15 @@ class FONA:
     @property
     def gprs(self):
         """Returns module's GPRS state."""
+        self._read_line()
         if self._debug:
             print("* Check GPRS State")
+
         if not self._send_parse_reply(b"AT+CGATT?", b"+CGATT: ", ":"):
             return False
-        return self._buf
+        if not self._buf:
+            return False
+        return True
 
     # pylint: disable=too-many-return-statements
     def set_gprs(self, apn=None, enable=True):
