@@ -229,7 +229,11 @@ class FONA:
 
         self._uart.write(b"AT+CIFSR\r\n")
         self._read_line()
-        return self.pretty_ip(self._buf)
+        try:
+            ip = self.pretty_ip(self._buf)
+        except:
+            return False
+        return ip
 
     @property
     def iccid(self):

@@ -41,6 +41,7 @@ class GSM:
         """
         self._iface = fona
         self._debug = debug
+        self._apn = apn
 
         # Attempt to enable GPS module and obtain GPS fix
         attempts = 10
@@ -61,32 +62,26 @@ class GSM:
             attempts -= 1
             time.sleep(1)
 
-        # Set GPRS
-        attempts = 5
-        while not self._iface.set_gprs(apn, True):
-            if attempts == 0:
-                raise RuntimeError("Unable to establish PDP context.")
-            if self._debug:
-                print("* Unable to bringup network, retrying, ", attempts)
-            self._iface.set_gprs(apn, False)
-            attempts -= 1
-            time.sleep(5)
-
-        # Query local IP
-        if not self._iface.local_ip:
-            raise RuntimeError("Unable to obtain module IP address.")
 
     @property
     def is_connected(self):
         """Returns if attached to GPRS and an IP Addresss was obtained.
         """
+        self._iface.local_ip
         if not self._iface.gprs and self._iface.local_ip:
             return False
         return True
 
-    def connect(self):
+    def connect(self, attempts=5):
         """Connect to GPRS network
-        """
-        # TODO
-        pass
+        :param int attempts: Amount of attempts to connect to GSM network.
 
+        """
+        while not self._iface.set_gprs(self._apn, True):
+            if attempts == 0:
+                raise RuntimeError("Unable to establish PDP context.")
+            if self._debug:
+                print("* Unable to bringup network, retrying, ", attempts)
+            self._iface.set_gprs(self._apn, False)
+            attempts -= 1
+            time.sleep(5)

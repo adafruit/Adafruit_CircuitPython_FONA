@@ -32,5 +32,6 @@ fona._debug = True
 
 # Enable GSM 
 gsm = GSM(fona, (secrets["apn"], secrets["apn_username"], secrets["apn_password"]))
+gsm.connect()
 
 print(gsm.is_connected)
