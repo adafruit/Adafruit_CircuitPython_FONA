@@ -223,17 +223,17 @@ class FONA:
 
     @property
     def local_ip(self):
-        """Returns the local IP Address."""
+        """Returns the local IP Address, False if not set."""
         if self._debug:
             print("\t---> AT+CIFSR")
 
         self._uart.write(b"AT+CIFSR\r\n")
         self._read_line()
         try:
-            ip = self.pretty_ip(self._buf)
-        except:
+            ip_addr = self.pretty_ip(self._buf)
+        except ValueError:
             return False
-        return ip
+        return ip_addr
 
     @property
     def iccid(self):
@@ -261,7 +261,7 @@ class FONA:
 
     # pylint: disable=too-many-return-statements
     def set_gprs(self, apn=None, enable=True):
-        """Sets and configures GPRS. 
+        """Configures and brings up GPRS.
         :param bool enable: Enables or disables GPRS.
 
         """
