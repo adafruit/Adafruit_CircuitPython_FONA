@@ -33,16 +33,14 @@ import time
 class GSM:
     """Interface for interacting with FONA 2G GSM modems.
     """
-    def __init__(self, fona, apn, debug=True):
+    def __init__(self, fona, apn):
         """Initializes interface with 2G GSM modem.
-        :param adafruit_fona fona: Adafruit FONA module.
+        :param adafruit_fona fona: The Adafruit FONA module we are using.
         :param tuple apn: Tuple containing APN name, (optional) APN username,
                             and APN password.
-        :param bool debug: Enable verbose debug output.
 
         """
         self._iface = fona
-        self._debug = debug
         self._apn = apn
         self._gsm_connected = False
 
@@ -69,9 +67,8 @@ class GSM:
     def is_attached(self):
         """Returns if the modem is attached to the network
         and the GPS has a fix."""
-        if self._iface.gps == 3:
-            if self._iface.network_status == 1:
-                return True
+        if self._iface.gps == 3 and self._iface.network_status == 1:
+            return True
         return False
 
 
