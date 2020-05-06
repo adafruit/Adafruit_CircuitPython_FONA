@@ -99,11 +99,8 @@ class FONA:
     # pylint: disable=too-many-branches, too-many-statements
     def _init_fona(self):
         """Initializes FONA module."""
-
         self.reset()
 
-        if self._debug:
-            print("Attempting to open comm with ATs")
         timeout = 7000
         while timeout > 0:
             while self._uart.in_waiting:
@@ -115,8 +112,6 @@ class FONA:
             timeout -= 500
 
         if timeout <= 0:
-            if self._debug:
-                print(" * Timeout: No response to AT. Last ditch attempt.")
             self._send_check_reply(CMD_AT, reply=REPLY_OK)
             time.sleep(0.1)
             self._send_check_reply(CMD_AT, reply=REPLY_OK)
@@ -139,9 +134,7 @@ class FONA:
         self._buf = b""
         self._uart.reset_input_buffer()
 
-        if self._debug:
-            print("\t---> ", "ATI")
-        self._uart.write(b"ATI\r\n")
+        self.uart_write(b"ATI\r\n")
         self._read_line(multiline=True)
 
         if self._buf.find(b"SIM808 R14") != -1:
@@ -154,10 +147,8 @@ class FONA:
             self._fona_type = FONA_3G_E
 
         if self._fona_type == FONA_800_L:
-            # determine if _H
-            if self._debug:
-                print("\t ---> AT+GMM")
-            self._uart.write(b"AT+GMM\r\n")
+            # determine if SIM800H
+            self.uart_write(b"AT+GMM\r\n")
             self._read_line(multiline=True)
             if self._debug:
                 print("\t <---", self._buf)
@@ -168,9 +159,7 @@ class FONA:
 
     def factory_reset(self):
         """Resets modem to factory configuration."""
-        if self._debug:
-            print("\t---> ATZ")
-        self._uart.write(b"ATZ\r\n")
+        self.uart_write(b"ATZ\r\n")
 
         if not self._expect_reply(REPLY_OK):
             return False
@@ -182,7 +171,7 @@ class FONA:
 
         """
         if self._debug:
-            print("* Resetting modem.")
+            print("* Reset FONA")
         # Reset the module
         self._rst.value = True
         time.sleep(0.01)
@@ -211,12 +200,12 @@ class FONA:
     @property
     def iemi(self):
         """Returns FONA module's IEMI number."""
+        if self._debug:
+            print("FONA IEMI")
         self._buf = b""
         self._uart.reset_input_buffer()
 
-        if self._debug:
-            print("\t---> ", "AT+GSN")
-        self._uart.write(b"AT+GSN\r\n")
+        self.uart_write(b"AT+GSN\r\n")
         self._read_line(multiline=True)
         iemi = self._buf[0:15]
         return iemi.decode("utf-8")
@@ -224,10 +213,7 @@ class FONA:
     @property
     def local_ip(self):
         """Returns the local IP Address, False if not set."""
-        if self._debug:
-            print("\t---> AT+CIFSR")
-
-        self._uart.write(b"AT+CIFSR\r\n")
+        self.uart_write(b"AT+CIFSR\r\n")
         self._read_line()
         try:
             ip_addr = self.pretty_ip(self._buf)
@@ -239,8 +225,8 @@ class FONA:
     def iccid(self):
         """Returns SIM Card's ICCID number as a string."""
         if self._debug:
-            print("\t---> AT+CCID: ")
-        self._uart.write(b"AT+CCID\r\n")
+            print("ICCID")
+        self.uart_write(b"AT+CCID\r\n")
         self._read_line(timeout=2000)  # 6.2.23, 2sec max. response time
         iccid = self._buf.decode()
         self._read_line()  # eat 'OK'
@@ -250,8 +236,6 @@ class FONA:
     def gprs(self):
         """Returns module's GPRS state."""
         self._read_line()
-        if self._debug:
-            print("* Check GPRS State")
 
         if not self._send_parse_reply(b"AT+CGATT?", b"+CGATT: ", ":"):
             return False
@@ -266,9 +250,6 @@ class FONA:
 
         """
         if enable:
-            if self._debug:
-                print("* Enabling GPRS...")
-
             apn_name, apn_user, apn_pass = apn
 
             apn_name = apn_name.encode()
@@ -310,14 +291,14 @@ class FONA:
                 print("setting APN...")
             self._uart.reset_input_buffer()
 
-            self._uart.write(b'AT+CSTT="' + apn_name)
+            self.uart_write(b'AT+CSTT="' + apn_name)
 
             if apn_user is not None:
-                self._uart.write(b'","' + apn_user)
+                self.uart_write(b'","' + apn_user)
 
             if apn_pass is not None:
-                self._uart.write(b'","' + apn_pass)
-            self._uart.write(b'"\r\n')
+                self.uart_write(b'","' + apn_pass)
+            self.uart_write(b'"\r\n')
 
             if not self._get_reply(REPLY_OK):
                 return False
@@ -347,10 +328,7 @@ class FONA:
             # Query local IP
             if not self.local_ip:
                 return False
-
         else:
-            if self._debug:
-                print("* Disabling GPRS...")
             # reset PDP state
             if not self._send_check_reply(
                 b"AT+CIPSHUT", reply=b"SHUT OK", timeout=20000
@@ -362,6 +340,8 @@ class FONA:
     @property
     def network_status(self):
         """Returns cellular/network status"""
+        if self._debug:
+            print("Network status")
         if not self._send_parse_reply(b"AT+CREG?", b"+CREG: ", idx=1):
             return False
         if self._buf == 0:
@@ -388,6 +368,8 @@ class FONA:
     @property
     def rssi(self):
         """Returns cellular network's Received Signal Strength Indicator (RSSI)."""
+        if self._debug:
+            print("RSSI")
         if not self._send_parse_reply(b"AT+CSQ", b"+CSQ: "):
             return False
 
@@ -409,9 +391,9 @@ class FONA:
 
     @property
     def gps(self):
-        """Returns the GPS status."""
+        """Returns the GPS fix."""
         if self._debug:
-            print("* GPS Status")
+            print("GPS Fix")
         if self._fona_type == FONA_808_V2:
             # 808 V2 uses GNS commands and doesn't have an explicit 2D/3D fix status.
             # Instead just look for a fix and if found assume it's a 3D fix.
@@ -483,14 +465,12 @@ class FONA:
         :param str hostname: Destination server.
 
         """
-        self._read_line()
         if self._debug:
-            print("*** get_host_by_name: ", hostname)
+            print("*** Get host by name")
+        self._read_line()
         if isinstance(hostname, str):
             hostname = bytes(hostname, "utf-8")
 
-        if self._debug:
-            print("\t---> AT+CDNSGIP=", hostname)
         if not self._send_check_reply(
             b'AT+CDNSGIP="' + hostname + b'"\r\n', reply=REPLY_OK
         ):
@@ -521,9 +501,9 @@ class FONA:
 
         """
         if self._debug:
-            print("*** Allocating Socket")
+            print("*** Get socket")
 
-        self._uart.write(b"AT+CIPSTATUS\r\n")
+        self.uart_write(b"AT+CIPSTATUS\r\n")
         self._read_line(100)  # OK
         self._read_line(100)  # table header
 
@@ -538,6 +518,8 @@ class FONA:
         # read out the rest of the responses
         for _ in range(allocated_socket, FONA_MAX_SOCKETS):
             self._read_line(100)
+        if self._debug:
+            print("Allocated socket #%d"%allocated_socket)
         return allocated_socket
 
     def remote_ip(self, sock_num):
@@ -549,7 +531,7 @@ class FONA:
             sock_num < FONA_MAX_SOCKETS
         ), "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
-        self._uart.write(b"AT+CIPSTATUS=" + str(sock_num).encode() + b"\r\n")
+        self.uart_write(b"AT+CIPSTATUS=" + str(sock_num).encode() + b"\r\n")
         self._read_line(100)
 
         self._parse_reply(b"+CIPSTATUS:", idx=3)
@@ -624,6 +606,13 @@ class FONA:
         :param int conn_mode: Connection mode (TCP/UDP)
 
         """
+        if self._debug:
+            print(
+                "*** Socket connect, protocol={}, port={}, ip={}".format(
+                    conn_mode, port, dest
+                )
+            )
+
         self._uart.reset_input_buffer()
         assert (
             sock_num < FONA_MAX_SOCKETS
@@ -638,25 +627,19 @@ class FONA:
             )
 
         # Query local IP Address
-        if self._debug:
-            print("\t---> AT+CIFSR")
-        self._uart.write(b"AT+CIFSR\r\n")
+        self.uart_write(b"AT+CIFSR\r\n")
         self._read_line()
 
         # Start connection
-        self._uart.write(b"AT+CIPSTART=")
-        self._uart.write(str(sock_num).encode())
+        self.uart_write(b"AT+CIPSTART=")
+        self.uart_write(str(sock_num).encode())
         if conn_mode == 0:
-            if self._debug:
-                print('\t--->AT+CIPSTART="TCP","{}",{}'.format(dest, port))
-            self._uart.write(b',"TCP","')
+            self.uart_write(b',"TCP","')
         else:
-            if self._debug:
-                print('\t--->AT+CIPSTART="UDP","{}",{}'.format(dest, port))
-                self._uart.write(b',"UDP","')
-        self._uart.write(dest.encode() + b'","')
-        self._uart.write(str(port).encode() + b'"')
-        self._uart.write(b"\r\n")
+            self.uart_write(b',"UDP","')
+        self.uart_write(dest.encode() + b'","')
+        self.uart_write(str(port).encode() + b'"')
+        self.uart_write(b"\r\n")
 
         if not self._expect_reply(REPLY_OK):
             return False
@@ -672,14 +655,16 @@ class FONA:
         :param int quick_close: Quickly or slowly close the socket. Enabled by default
 
         """
+        if self._debug:
+            print("*** Closing socket #%d" % sock_num)
         assert (
             sock_num < FONA_MAX_SOCKETS
         ), "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
         self._read_line()
 
-        self._uart.write(b"AT+CIPCLOSE=" + str(sock_num).encode() + b",")
-        self._uart.write(str(quick_close).encode() + b"\r\n")
+        self.uart_write(b"AT+CIPCLOSE=" + str(sock_num).encode() + b",")
+        self.uart_write(str(quick_close).encode() + b"\r\n")
         self._read_line()
         if not self._parse_reply(b"CLOSE OK", idx=0):
             return False
@@ -699,11 +684,11 @@ class FONA:
         self._read_line()
         if self._debug:
             print("* socket read")
-            print("\t ---> AT+CIPRXGET=2,{},{}".format(sock_num, length))
-        self._uart.write(b"AT+CIPRXGET=2,")
-        self._uart.write(str(sock_num).encode())
-        self._uart.write(b",")
-        self._uart.write(str(length).encode() + b"\r\n")
+
+        self.uart_write(b"AT+CIPRXGET=2,")
+        self.uart_write(str(sock_num).encode())
+        self.uart_write(b",")
+        self.uart_write(str(length).encode() + b"\r\n")
 
         self._read_line()
 
@@ -727,13 +712,10 @@ class FONA:
         ), "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
 
-        if self._debug:
-            print("\t--->AT+CIPSEND={},{}".format(sock_num, len(buffer)))
-
         self._uart.reset_input_buffer()
-        self._uart.write(b"AT+CIPSEND=" + str(sock_num).encode())
-        self._uart.write(b"," + str(len(buffer)).encode())
-        self._uart.write(b"\r\n")
+        self.uart_write(b"AT+CIPSEND=" + str(sock_num).encode())
+        self.uart_write(b"," + str(len(buffer)).encode())
+        self.uart_write(b"\r\n")
         self._read_line()
 
         if self._debug:
@@ -743,7 +725,7 @@ class FONA:
             # promoting mark ('>') not found
             return False
 
-        self._uart.write(buffer + b"\r\n")
+        self.uart_write(buffer + b"\r\n")
         self._read_line(3000)
 
         if self._debug:
@@ -755,6 +737,21 @@ class FONA:
         return True
 
     ### UART Reply/Response Helpers ###
+
+    def uart_write(self, buffer):
+        """UART ``write`` with optional debug that prints
+        the buffer before sending.
+        :param bytes buffer: Buffer of bytes to send to the bus.
+
+        """
+        #out_buffer_str = ", ".join([hex(i) for i in buffer])
+        if self._debug:
+            print("\tUARTWRITE ::", buffer.decode())
+        self._uart.write(buffer)
+
+    def uart_read(self):
+        # TODO!
+        pass
 
     def _send_parse_reply(self, send_data, reply_data, divider=",", idx=0):
         """Sends data to FONA module, parses reply data returned.
@@ -780,13 +777,9 @@ class FONA:
         self._uart.reset_input_buffer()
 
         if data is not None:
-            if self._debug:
-                print("\t---> ", data)
-            self._uart.write(data + "\r\n")
+            self.uart_write(data + b"\r\n")
         else:
-            if self._debug:
-                print("\t---> {}{}".format(prefix, suffix))
-            self._uart.write(prefix + suffix + b"\r\n")
+            self.uart_write(prefix + suffix + b"\r\n")
 
         line = self._read_line(timeout)
 
@@ -912,18 +905,10 @@ class FONA:
         """
         self._uart.reset_input_buffer()
 
-        if self._debug:
-            print("\t---> ", end="")
-            print(prefix, end="")
-            print('""', end="")
-            print(suffix, end="")
-            print('""')
-
-        self._uart.write(prefix + b'"')
-        self._uart.write(suffix + b'"\r\n')
+        self.uart_write(prefix + b'"')
+        self.uart_write(suffix + b'"\r\n')
 
         line = self._read_line(timeout)
-
         if self._debug:
             print("\t<--- ", self._buf)
 
