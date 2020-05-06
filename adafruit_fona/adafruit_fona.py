@@ -150,8 +150,6 @@ class FONA:
             # determine if SIM800H
             self.uart_write(b"AT+GMM\r\n")
             self._read_line(multiline=True)
-            if self._debug:
-                print("\t <---", self._buf)
 
             if self._buf.find(b"SIM800H") != -1:
                 self._fona_type = FONA_800_H
@@ -287,8 +285,6 @@ class FONA:
             )
 
             # send AT+CSTT,"apn","user","pass"
-            if self._debug:
-                print("setting APN...")
             self._uart.reset_input_buffer()
 
             self.uart_write(b'AT+CSTT="' + apn_name)
@@ -481,8 +477,6 @@ class FONA:
         while not self._parse_reply(b"+CDNSGIP:", idx=2):
             self._read_line()
 
-        if self._debug:
-            print("\t<--- ", self._buf)
         return self._buf
 
     def pretty_ip(self, ip):  # pylint: disable=no-self-use, invalid-name
@@ -519,7 +513,7 @@ class FONA:
         for _ in range(allocated_socket, FONA_MAX_SOCKETS):
             self._read_line(100)
         if self._debug:
-            print("Allocated socket #%d"%allocated_socket)
+            print("Allocated socket #%d" % allocated_socket)
         return allocated_socket
 
     def remote_ip(self, sock_num):
@@ -535,8 +529,6 @@ class FONA:
         self._read_line(100)
 
         self._parse_reply(b"+CIPSTATUS:", idx=3)
-        if self._debug:
-            print("\t<--- ", self._buf)
         return self._buf
 
     def socket_status(self, sock_num):
@@ -553,8 +545,6 @@ class FONA:
 
         # eat the 'STATE: ' message
         self._read_line()
-        if self._debug:
-            print("\t<--- ", self._buf)
 
         # read "C: <n>" for each active connection
         for state in range(0, sock_num + 1):
@@ -718,18 +708,12 @@ class FONA:
         self.uart_write(b"\r\n")
         self._read_line()
 
-        if self._debug:
-            print("\t<--- ", self._buf)
-
         if self._buf[0] != 62:
             # promoting mark ('>') not found
             return False
 
         self.uart_write(buffer + b"\r\n")
         self._read_line(3000)
-
-        if self._debug:
-            print("\t<--- ", self._buf)
 
         if "SEND OK" not in self._buf.decode():
             return False
@@ -744,14 +728,9 @@ class FONA:
         :param bytes buffer: Buffer of bytes to send to the bus.
 
         """
-        #out_buffer_str = ", ".join([hex(i) for i in buffer])
         if self._debug:
             print("\tUARTWRITE ::", buffer.decode())
         self._uart.write(buffer)
-
-    def uart_read(self):
-        # TODO!
-        pass
 
     def _send_parse_reply(self, send_data, reply_data, divider=",", idx=0):
         """Sends data to FONA module, parses reply data returned.
@@ -782,9 +761,6 @@ class FONA:
             self.uart_write(prefix + suffix + b"\r\n")
 
         line = self._read_line(timeout)
-
-        if self._debug:
-            print("\t<--- ", self._buf)
         return line
 
     def _parse_reply(self, reply, divider=",", idx=0):
@@ -813,7 +789,8 @@ class FONA:
         return True
 
     def _read_line(self, timeout=FONA_DEFAULT_TIMEOUT_MS, multiline=False):
-        """Reads one or multiple lines into the buffer.
+        """Reads one or multiple lines into the buffer. Optionally prints the buffer
+        after reading.
         :param int timeout: Time to wait for UART serial to reply, in seconds.
         :param bool multiline: Read multiple lines.
 
@@ -847,6 +824,9 @@ class FONA:
                 break
             timeout -= 1
             time.sleep(0.001)
+
+        if self._debug:
+            print("\tUARTREAD ::", self._buf.decode())
 
         return reply_idx
 
@@ -909,9 +889,6 @@ class FONA:
         self.uart_write(suffix + b'"\r\n')
 
         line = self._read_line(timeout)
-        if self._debug:
-            print("\t<--- ", self._buf)
-
         return line
 
     def _expect_reply(self, reply, timeout=10000):
@@ -920,8 +897,6 @@ class FONA:
 
         """
         self._read_line(timeout)
-        if self._debug:
-            print("\t<--- ", self._buf)
         if reply not in self._buf:
             return False
         return True
