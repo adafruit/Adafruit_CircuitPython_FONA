@@ -1,7 +1,9 @@
+import time
 import board
 import busio
 import digitalio
 from adafruit_fona.adafruit_fona import FONA
+from adafruit_fona.adafruit_fona_gsm import GSM
 import adafruit_fona.adafruit_fona_socket as cellular_socket
 import adafruit_requests as requests
 
@@ -26,20 +28,23 @@ rst = digitalio.DigitalInOut(board.D4)
 # Initialize FONA module (this may take a few seconds)
 fona = FONA(uart, rst)
 
-# Enable GPS
-fona.gps = True
+# initialize gsm
+gsm = GSM(fona, (secrets["apn"], secrets["apn_username"], secrets["apn_password"]))
 
-# Bring up cellular connection
-fona.configure_gprs((secrets["apn"], secrets["apn_username"], secrets["apn_password"]))
+while not gsm.is_attached:
+    print("Attaching to network...")
+    time.sleep(0.5)
 
-# Bring up GPRS
-fona.gprs = True
-
-# Initialize a requests object with a socket and cellular interface
-requests.set_socket(cellular_socket, fona)
+while not gsm.is_connected:
+    print("Connecting to network...")
+    gsm.connect()
+    time.sleep(5)
 
 print("My IP address is:", fona.local_ip)
 print("IP lookup adafruit.com: %s" % fona.get_host_by_name("adafruit.com"))
+
+# Initialize a requests object with a socket and cellular interface
+requests.set_socket(cellular_socket, fona)
 
 # fona._debug = True
 print("Fetching text from", TEXT_URL)

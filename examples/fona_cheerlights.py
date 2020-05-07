@@ -3,11 +3,13 @@ import board
 import busio
 import digitalio
 from adafruit_fona.adafruit_fona import FONA
+from adafruit_fona.adafruit_fona_gsm import GSM
 import adafruit_fona.adafruit_fona_socket as cellular_socket
 import adafruit_requests as requests
 
 import neopixel
 import adafruit_fancyled.adafruit_fancyled as fancy
+
 
 # Get GPRS details and more from a secrets.py file
 try:
@@ -23,18 +25,19 @@ uart = busio.UART(board.TX, board.RX, baudrate=4800)
 rst = digitalio.DigitalInOut(board.D4)
 
 # Initialize FONA module (this may take a few seconds)
-print("Initializing FONA")
 fona = FONA(uart, rst)
 
-# Enable GPS
-fona.gps = True
+# initialize gsm
+gsm = GSM(fona, (secrets["apn"], secrets["apn_username"], secrets["apn_password"]))
 
-# Bring up cellular connection
-fona.configure_gprs((secrets["apn"], secrets["apn_username"], secrets["apn_password"]))
+while not gsm.is_attached:
+    print("Attaching to network...")
+    time.sleep(0.5)
 
-# Bring up GPRS
-fona.gprs = True
-print("FONA initialized")
+while not gsm.is_connected:
+    print("Connecting to network...")
+    gsm.connect()
+    time.sleep(5)
 
 # Initialize a requests object with a socket and cellular interface
 requests.set_socket(cellular_socket, fona)
