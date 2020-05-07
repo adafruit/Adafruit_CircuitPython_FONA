@@ -488,6 +488,26 @@ class FONA:
         octets = [int(x) for x in ip.split(".")]
         return bytes(octets)
 
+    ### SMS ###
+
+    def send_sms(self, phone_number, message):
+        """Sends a message SMS to a phone number.
+        :param int phone_number: Destination phone number.
+        :param str message: Message to send to the phone number.
+
+        """
+        # select SMS message format, text mode (4.2.2)
+        if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
+            return False
+
+        self.uart_write(b"AT+CMGS" + b"+\'" + str(phone_number).encode() + b"'")
+        # <CR><CR><LF>><Space>
+        self._uart.write(b"\r\r\n> ")
+        self._uart.write(b"\n")
+        self._read_line(30000)
+        
+
+
     ### Socket API (TCP, UDP) ###
 
     def get_socket(self):
