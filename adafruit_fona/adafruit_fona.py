@@ -527,6 +527,48 @@ class FONA:
             return False
         return True
 
+    @property
+    def num_sms(self):
+        """Returns the number of SMS messages stored in memory, False otherwise.
+        """
+        # text mode
+        if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
+            return False
+        
+        # ask how many SMS are stored
+        self._send_parse_reply(b"AT+CPMS?", b"\"SM_P\"" + b",")
+        print("Reply: ", self._buf)
+        # TODO 
+
+    def read_sms(self, sms_slot=None):
+        """Reads SMS messages from FONA device.
+        If no sms_slot is selected, read_sms returns all sms messages on the device.
+        :param int sms_slot: SMS memory slot number.
+
+        """
+        # text mode
+        if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
+            return False
+        
+        if not self._send_check_reply(b"AT+CSDH=1", reply=REPLY_OK):
+            return False
+        
+        sms_length = 0
+
+        if sms_slot is None:
+            self.uart_write(b"AT+CMGL=\"ALL\"" + b"\r\n")
+            self._read_line()
+            self._read_line()
+            self._read_line()
+            self._read_line()
+            return True
+
+        self.uart_write(b"AT+CMGR=" + str(sms_slot).encode() + b"\r\n")
+        self._read_line()
+        return True
+    
+
+
     ### Socket API (TCP, UDP) ###
 
     def get_socket(self):
