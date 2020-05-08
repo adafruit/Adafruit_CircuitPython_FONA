@@ -500,13 +500,32 @@ class FONA:
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
             return False
 
-        self.uart_write(b"AT+CMGS" + b"+\'" + str(phone_number).encode() + b"'")
-        # <CR><CR><LF>><Space>
-        self._uart.write(b"\r\r\n> ")
-        self._uart.write(b"\n")
-        self._read_line(30000)
-        
+        self.uart_write(b"AT+CMGS=\"+" + str(phone_number).encode() + b"\"" + b"\r")
+        self._read_line()
 
+        # expect > 
+        if self._buf[0] != 62:
+            # promoting mark ('>') not found
+            return False
+        self._read_line()
+
+        # write out message and ^z
+        self.uart_write((message + chr(26)).encode())
+        
+        if self._fona_type == FONA_3G_A or self._fona_type == FONA_3G_E:
+            # eat 2x CRLF
+            self._read_line(200)
+            self._read_line(200)
+        # read +CMGS, wait ~10sec.
+        self._read_line(10000)
+
+        if not "+CMGS" in self._buf:
+            return False
+        
+        # read OK
+        if not self._expect_reply(REPLY_OK):
+            return False
+        return True
 
     ### Socket API (TCP, UDP) ###
 
