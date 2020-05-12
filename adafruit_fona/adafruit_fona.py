@@ -75,6 +75,7 @@ FONA_SMS_STORAGE_INTERNAL = b"\"SM\""
 
 # pylint: enable=bad-whitespace
 
+
 # pylint: disable=too-many-instance-attributes, too-many-public-methods
 class FONA:
     """CircuitPython FONA module interface.
@@ -500,6 +501,10 @@ class FONA:
         :param str message: Message to send to the phone number.
 
         """
+        self._read_line()
+        self._read_line()
+        # TODO: Assert phone number is an INT
+
         # select SMS message format, text mode (4.2.2)
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
             return False
@@ -548,14 +553,19 @@ class FONA:
         else:
             if self._send_parse_reply(b"AT+CPMS?", FONA_SMS_STORAGE_INTERNAL + b",", idx=1):
                 return self._buf
+        
+        self._read_line() # eat OK
         if self._send_parse_reply(b"AT+CPMS?", b"\"SM\",", idx=1):
             return self._buf
+
+        self._read_line() # eat OK
         if self._send_parse_reply(b"AT+CPMS?", b"\"SM_P\",", idx=1):
             return self._buf
         return False
 
     def delete_all_sms(self):
         """Deletes all SMS messages on the FONA SIM."""
+        self._read_line()
         # text mode
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
             return False
@@ -593,8 +603,6 @@ class FONA:
 
         """
         self._read_line()
-        self._read_line()
-
 
         # text mode
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
