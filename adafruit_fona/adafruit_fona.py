@@ -542,14 +542,17 @@ class FONA:
             return False
 
         # ask how many SMS are stored
-        # TODO: look @ this again!
-        if not self._send_parse_reply(b"AT+CPMS?", b"\"SM\",", idx=1):
-            return False
-        if not self._send_parse_reply(b"AT+CPMS?", b"\"SM_P\",", idx=1):
-            return False
-
-        self._uart.reset_input_buffer()
-        return self._buf
+        if sim_storage:
+            if self._send_parse_reply(b"AT+CPMS?", FONA_SMS_STORAGE_SIM + b",", idx=1):
+                return self._buf
+        else:
+            if self._send_parse_reply(b"AT+CPMS?", FONA_SMS_STORAGE_INTERNAL + b",", idx=1):
+                return self._buf
+        if self._send_parse_reply(b"AT+CPMS?", b"\"SM\",", idx=1):
+            return self._buf
+        if self._send_parse_reply(b"AT+CPMS?", b"\"SM_P\",", idx=1):
+            return self._buf
+        return False
 
     def delete_all_sms(self):
         """Deletes all SMS messages on the FONA SIM."""
