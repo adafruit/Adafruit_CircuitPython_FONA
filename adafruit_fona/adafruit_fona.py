@@ -501,9 +501,8 @@ class FONA:
         :param str message: Message to send to the phone number.
 
         """
-        self._read_line()
-        self._read_line()
-        # TODO: Assert phone number is an INT
+        if not hasattr(phone_number, 'to_bytes'):
+            raise TypeError("Phone number must be integer")
 
         # select SMS message format, text mode (4.2.2)
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
