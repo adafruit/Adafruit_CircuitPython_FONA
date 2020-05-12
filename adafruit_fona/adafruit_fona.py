@@ -572,7 +572,6 @@ class FONA:
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
             return False
 
-
         sendbuff = b"AT+CMGD=";
         s2 = (sms_slot / 100) + 0
         
@@ -594,6 +593,8 @@ class FONA:
 
         """
         self._read_line()
+        self._read_line()
+
 
         # text mode
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
