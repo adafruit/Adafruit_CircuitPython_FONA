@@ -542,12 +542,7 @@ class FONA:
             return False
 
         # ask how many SMS are stored
-        if sim_storage:
-            if not self._send_parse_reply(b"AT+CPMS?", FONA_SMS_STORAGE_SIM + b",", idx=1):
-                return False
-        else:
-            if not self._send_parse_reply(b"AT+CPMS?", FONA_SMS_STORAGE_INTERNAL + b",", idx=1):
-                return False
+        # TODO: look @ this again!
         if not self._send_parse_reply(b"AT+CPMS?", b"\"SM\",", idx=1):
             return False
         if not self._send_parse_reply(b"AT+CPMS?", b"\"SM_P\",", idx=1):
@@ -556,11 +551,43 @@ class FONA:
         self._uart.reset_input_buffer()
         return self._buf
 
-    def read_sms(self, sms_slot=None):
+    def delete_all_sms(self):
+        """Deletes all SMS messages on the FONA SIM."""
+        # text mode
+        if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
+            return False
+
+        if not self._send_check_reply(b"AT+CMGDA=\"DEL ALL\"", reply=REPLY_OK, timeout=25000):
+            return False
+        return True
+
+    def delete_sms(self, sms_slot):
+        """Deletes a SMS message in the provided SMS slot.
+        :param int sms_slot: SMS SIM or FONA memory slot number
+
+        """
+        if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
+            return False
+
+
+        sendbuff = b"AT+CMGD=";
+        s2 = (sms_slot / 100) + 0
+        
+        sms_slot %= 100;
+        s3 = (sms_slot / 10) + 0
+        
+        sms_slot %= 10;
+        s4 = sms_slot + 0
+
+        print(sendbuff, s2, s3, s4)
+
+        self._send_check_reply(sendbuff, reply=REPLY_OK, timeout=2000)
+
+
+    def read_sms(self, sms_slot):
         """Reads and parses SMS messages from FONA device. Returns the SMS
-        (sender, data) as a tuple.
-        If no sms_slot is selected, read_sms returns all sms messages on the device.
-        :param int sms_slot: SMS memory slot number.
+        sender's phone number and the message contents as a tuple.
+        :param int sms_slot: SMS SIM or FONA memory slot number
 
         """
         self._read_line()
@@ -579,7 +606,7 @@ class FONA:
         # get sender
         if not self._parse_reply(b"+CMGR:", idx=1):
             return False
-        sender = self._buf
+        sender = self._buf.strip('"')
 
         # get sms length
         self._buf = resp
@@ -593,7 +620,6 @@ class FONA:
         self._uart.readinto(self._buf)
         # discard unread chars in buffer
         self._uart.reset_input_buffer()
-
 
         return sender, bytes(self._buf).decode()
 
