@@ -543,23 +543,28 @@ class FONA:
 
         # ask how many SMS are stored
         if sim_storage:
-            if self._send_parse_reply(b"AT+CPMS?", FONA_SMS_STORAGE_SIM + b",", idx=1):
-                return self._buf
+            if not self._send_parse_reply(b"AT+CPMS?", FONA_SMS_STORAGE_SIM + b",", idx=1):
+                return False
         else:
-            if self._send_parse_reply(b"AT+CPMS?", FONA_SMS_STORAGE_INTERNAL + b",", idx=1):
-                return self._buf
-        if self._send_parse_reply(b"AT+CPMS?", b"\"SM\",", idx=1):
-            return self._buf
-        if self._send_parse_reply(b"AT+CPMS?", b"\"SM_P\",", idx=1):
-            return self._buf
-        return False
+            if not self._send_parse_reply(b"AT+CPMS?", FONA_SMS_STORAGE_INTERNAL + b",", idx=1):
+                return False
+        if not self._send_parse_reply(b"AT+CPMS?", b"\"SM\",", idx=1):
+            return False
+        if not self._send_parse_reply(b"AT+CPMS?", b"\"SM_P\",", idx=1):
+            return False
+
+        self._uart.reset_input_buffer()
+        return self._buf
 
     def read_sms(self, sms_slot=None):
-        """Reads SMS messages from FONA device.
+        """Reads and parses SMS messages from FONA device. Returns the SMS
+        (sender, data) as a tuple.
         If no sms_slot is selected, read_sms returns all sms messages on the device.
         :param int sms_slot: SMS memory slot number.
 
         """
+        self._read_line()
+
         # text mode
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
             return False
@@ -567,19 +572,21 @@ class FONA:
         if not self._send_check_reply(b"AT+CSDH=1", reply=REPLY_OK):
             return False
 
-        # TODO: Add this back
-        #if sms_slot is None:
-        #    self.uart_write(b"AT+CMGL=\"ALL\"" + b"\r\n")
-        #    self._read_line()
-        #    return True
-
         self.uart_write(b"AT+CMGR=" + str(sms_slot).encode() + b"\r\n")
         self._read_line(1000)
+        resp = self._buf
+
+        # get sender
+        if not self._parse_reply(b"+CMGR:", idx=1):
+            return False
+        sender = self._buf
 
         # get sms length
+        self._buf = resp
         if not self._parse_reply(b"+CMGR:", idx=11):
             return False
         sms_len = self._buf
+
         # rsize shared buf
         self._buf = bytearray(sms_len)
         # read into buffer
@@ -588,7 +595,7 @@ class FONA:
         self._uart.reset_input_buffer()
 
 
-        return bytes(self._buf).decode()
+        return sender, bytes(self._buf).decode()
 
 
     ### Socket API (TCP, UDP) ###
