@@ -21,8 +21,10 @@ print("Connected to network!")
 print("RSSI: %ddB" % fona.rssi)
 
 # Text a number
+print("Sending SMS...")
 if not fona.send_sms(140404, "HELP"):
     raise RuntimeError("FONA did not successfully send SMS")
+print("SMS Sent!")
 
 # Ask the FONA how many SMS message it has
 num_sms = fona.num_sms
