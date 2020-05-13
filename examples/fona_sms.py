@@ -18,7 +18,7 @@ while fona.network_status != 1:
     print("Connecting to network...")
     time.sleep(1)
 print("Connected to network!")
-print("RSSI: %ddB"%fona.rssi)
+print("RSSI: %ddB" % fona.rssi)
 
 # Text a number
 if not fona.send_sms(140404, "HELP"):
@@ -26,7 +26,7 @@ if not fona.send_sms(140404, "HELP"):
 
 # Ask the FONA how many SMS message it has
 num_sms = fona.num_sms
-print("%d SMS's on SIM Card"%num_sms)
+print("%d SMS's on SIM Card" % num_sms)
 
 # Read out all the SMS messages on the FONA's SIM
 for slot in range(1, num_sms):
