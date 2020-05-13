@@ -26,7 +26,6 @@
 
 CircuitPython library for the Adafruit FONA cellular module
 
-
 * Author(s): ladyada, Brent Rubell
 
 Implementation Notes
@@ -62,16 +61,10 @@ FONA_808_V2 = const(0x3)
 FONA_3G_A = const(0x4)
 FONA_3G_E = const(0x5)
 
-# HTTP Actions
-FONA_HTTP_GET = const(0x00)
-FONA_HTTP_POST = const(0x01)
-FONA_HTTP_HEAD = const(0x02)
-
 FONA_MAX_SOCKETS = const(6)
 
-# FONA SMS storage methods
-FONA_SMS_STORAGE_SIM = b"\"SM\""
-FONA_SMS_STORAGE_INTERNAL = b"\"SM\""
+FONA_SMS_STORAGE_SIM = b'"SM"'
+FONA_SMS_STORAGE_INTERNAL = b'"SM"'
 
 # pylint: enable=bad-whitespace
 
@@ -175,7 +168,6 @@ class FONA:
         """
         if self._debug:
             print("* Reset FONA")
-        # Reset the module
         self._rst.value = True
         time.sleep(0.01)
         self._rst.value = False
@@ -205,7 +197,6 @@ class FONA:
         """Returns FONA module's IEMI number."""
         if self._debug:
             print("FONA IEMI")
-        self._buf = b""
         self._uart.reset_input_buffer()
 
         self.uart_write(b"AT+GSN\r\n")
@@ -326,7 +317,6 @@ class FONA:
             if not self._send_check_reply(b"AT+CIICR", reply=REPLY_OK, timeout=10000):
                 return False
 
-            # Query local IP
             if not self.local_ip:
                 return False
         else:
@@ -345,26 +335,19 @@ class FONA:
             print("Network status")
         if not self._send_parse_reply(b"AT+CREG?", b"+CREG: ", idx=1):
             return False
-        if self._buf == 0:
-            # Not Registered
+        if self._buf == 0:  # Not Registered
             return self._buf
-        if self._buf == 1:
-            # Registered (home)
+        if self._buf == 1:  # Registered (home)
             return self._buf
-        if self._buf == 2:
-            # Not Registered (searching)
+        if self._buf == 2:  # Not Registered (searching)
             return self._buf
-        if self._buf == 3:
-            # Denied
+        if self._buf == 3:  # Denied
             return self._buf
-        if self._buf == 4:
-            # Unknown
+        if self._buf == 4:  # Unknown
             return self._buf
-        if self._buf == 5:
-            # Registered Roaming
+        if self._buf == 5:  # Registered Roaming
             return self._buf
-        # "Unknown"
-        return self._buf
+        return False
 
     @property
     def rssi(self):
@@ -501,17 +484,17 @@ class FONA:
         :param str message: Message to send to the phone number.
 
         """
-        if not hasattr(phone_number, 'to_bytes'):
+        if not hasattr(phone_number, "to_bytes"):
             raise TypeError("Phone number must be integer")
 
         # select SMS message format, text mode (4.2.2)
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
             return False
 
-        self.uart_write(b"AT+CMGS=\"+" + str(phone_number).encode() + b"\"" + b"\r")
+        self.uart_write(b'AT+CMGS="+' + str(phone_number).encode() + b'"' + b"\r")
         self._read_line()
 
-        # expect > 
+        # expect >
         if self._buf[0] != 62:
             # promoting mark ('>') not found
             return False
@@ -519,7 +502,7 @@ class FONA:
 
         # write out message and ^z
         self.uart_write((message + chr(26)).encode())
-        
+
         if self._fona_type == FONA_3G_A or self._fona_type == FONA_3G_E:
             # eat 2x CRLF
             self._read_line(200)
@@ -529,7 +512,7 @@ class FONA:
 
         if not "+CMGS" in self._buf:
             return False
-        
+
         # read OK
         if not self._expect_reply(REPLY_OK):
             return False
@@ -541,72 +524,64 @@ class FONA:
 
         :param bool sim_storage: SMS storage on the SIM, otherwise internal storage on FONA chip.
         """
-        # text mode
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
             return False
 
-        # ask how many SMS are stored
-        if sim_storage:
+        if sim_storage:  # ask how many SMS are stored
             if self._send_parse_reply(b"AT+CPMS?", FONA_SMS_STORAGE_SIM + b",", idx=1):
                 return self._buf
         else:
-            if self._send_parse_reply(b"AT+CPMS?", FONA_SMS_STORAGE_INTERNAL + b",", idx=1):
+            if self._send_parse_reply(
+                b"AT+CPMS?", FONA_SMS_STORAGE_INTERNAL + b",", idx=1
+            ):
                 return self._buf
-        
-        self._read_line() # eat OK
-        if self._send_parse_reply(b"AT+CPMS?", b"\"SM\",", idx=1):
+
+        self._read_line()  # eat OK
+        if self._send_parse_reply(b"AT+CPMS?", b'"SM",', idx=1):
             return self._buf
 
-        self._read_line() # eat OK
-        if self._send_parse_reply(b"AT+CPMS?", b"\"SM_P\",", idx=1):
+        self._read_line()  # eat OK
+        if self._send_parse_reply(b"AT+CPMS?", b'"SM_P",', idx=1):
             return self._buf
         return False
 
     def delete_all_sms(self):
         """Deletes all SMS messages on the FONA SIM."""
         self._read_line()
-        # text mode
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
             return False
 
-        if not self._send_check_reply(b"AT+CMGDA=\"DEL ALL\"", reply=REPLY_OK, timeout=25000):
+        if not self._send_check_reply(
+            b'AT+CMGDA="DEL ALL"', reply=REPLY_OK, timeout=25000
+        ):
             return False
         return True
 
     def delete_sms(self, sms_slot):
         """Deletes a SMS message in the provided SMS slot.
-        :param int sms_slot: SMS SIM or FONA memory slot number
+        :param int sms_slot: SMS SIM or FONA memory slot number.
 
         """
+        self._read_line()
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
             return False
 
-        sendbuff = b"AT+CMGD=";
-        s2 = (sms_slot / 100) + 0
-        
-        sms_slot %= 100;
-        s3 = (sms_slot / 10) + 0
-        
-        sms_slot %= 10;
-        s4 = sms_slot + 0
+        if not self._send_check_reply(
+            b"AT+CMGD=" + str(sms_slot).encode(), reply=REPLY_OK
+        ):
+            return False
 
-        print(sendbuff, s2, s3, s4)
-
-        self._send_check_reply(sendbuff, reply=REPLY_OK, timeout=2000)
-
+        return True
 
     def read_sms(self, sms_slot):
         """Reads and parses SMS messages from FONA device. Returns the SMS
         sender's phone number and the message contents as a tuple.
-        :param int sms_slot: SMS SIM or FONA memory slot number
+        :param int sms_slot: SMS SIM or FONA memory slot number.
 
         """
         self._read_line()
-
-        # text mode
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
             return False
-        
         if not self._send_check_reply(b"AT+CSDH=1", reply=REPLY_OK):
             return False
 
@@ -625,15 +600,11 @@ class FONA:
             return False
         sms_len = self._buf
 
-        # rsize shared buf
         self._buf = bytearray(sms_len)
-        # read into buffer
         self._uart.readinto(self._buf)
-        # discard unread chars in buffer
         self._uart.reset_input_buffer()
 
         return sender, bytes(self._buf).decode()
-
 
     ### Socket API (TCP, UDP) ###
 
@@ -649,8 +620,7 @@ class FONA:
         self._read_line(100)  # table header
 
         allocated_socket = 0
-        for sock in range(0, FONA_MAX_SOCKETS):
-            # parse and check for INITIAL client state
+        for sock in range(0, FONA_MAX_SOCKETS):  # check if INITIAL state
             self._read_line(100)
             self._parse_reply(b"C:", idx=5)
             if self._buf.strip('"') == "INITIAL" or self._buf.strip('"') == "CLOSED":
@@ -689,12 +659,9 @@ class FONA:
                                              sockets for the FONA module."
         if not self._send_check_reply(b"AT+CIPSTATUS", reply=REPLY_OK, timeout=100):
             return False
-
-        # eat the 'STATE: ' message
         self._read_line()
 
-        # read "C: <n>" for each active connection
-        for state in range(0, sock_num + 1):
+        for state in range(0, sock_num + 1):  # read "C: <n>" for each active connection
             self._read_line()
             if state == sock_num:
                 break
@@ -768,15 +735,12 @@ class FONA:
         self._read_line()
 
         # Start connection
-        self.uart_write(b"AT+CIPSTART=")
-        self.uart_write(str(sock_num).encode())
+        self.uart_write(b"AT+CIPSTART=" + str(sock_num).encode())
         if conn_mode == 0:
             self.uart_write(b',"TCP","')
         else:
             self.uart_write(b',"UDP","')
-        self.uart_write(dest.encode() + b'","')
-        self.uart_write(str(port).encode() + b'"')
-        self.uart_write(b"\r\n")
+        self.uart_write(dest.encode() + b'","' + str(port).encode() + b'"\r\n')
 
         if not self._expect_reply(REPLY_OK):
             return False
@@ -851,8 +815,7 @@ class FONA:
 
         self._uart.reset_input_buffer()
         self.uart_write(b"AT+CIPSEND=" + str(sock_num).encode())
-        self.uart_write(b"," + str(len(buffer)).encode())
-        self.uart_write(b"\r\n")
+        self.uart_write(b"," + str(len(buffer)).encode() + b"\r\n")
         self._read_line()
 
         if self._buf[0] != 62:
@@ -907,8 +870,7 @@ class FONA:
         else:
             self.uart_write(prefix + suffix + b"\r\n")
 
-        line = self._read_line(timeout)
-        return line
+        return self._read_line(timeout)
 
     def _parse_reply(self, reply, divider=",", idx=0):
         """Attempts to find reply in UART buffer, reads up to divider.
@@ -916,7 +878,6 @@ class FONA:
         :param str divider: Divider character.
 
         """
-        # attempt to find reply in buffer
         parsed_reply = self._buf.find(reply)
         if parsed_reply == -1:
             return False
@@ -950,24 +911,18 @@ class FONA:
 
             while self._uart.in_waiting:
                 char = self._uart.read(1)
-                # print(char)
                 if char == b"\r":
                     continue
                 if char == b"\n":
-                    if reply_idx == 0:
-                        # ignore first '\n'
+                    if reply_idx == 0:  # ignore first '\n'
                         continue
-                    if not multiline:
-                        # second '\n' is EOL
+                    if not multiline:  # second '\n' is EOL
                         timeout = 0
                         break
-                # print(char, self._buf)
                 self._buf += char
                 reply_idx += 1
 
             if timeout == 0:
-                # if self._debug:
-                # print("* Timed out!")
                 break
             timeout -= 1
             time.sleep(0.001)
@@ -997,7 +952,6 @@ class FONA:
             if not self._get_reply(send, timeout=timeout):
                 return False
 
-        # validate response
         if not self._buf == reply:
             return False
 
@@ -1017,7 +971,6 @@ class FONA:
 
         self._get_reply_quoted(prefix, suffix, timeout)
 
-        # validate response
         if reply not in self._buf:
             return False
         return True
@@ -1032,11 +985,9 @@ class FONA:
         """
         self._uart.reset_input_buffer()
 
-        self.uart_write(prefix + b'"')
-        self.uart_write(suffix + b'"\r\n')
+        self.uart_write(prefix + b'"' + suffix + b'"\r\n')
 
-        line = self._read_line(timeout)
-        return line
+        return self._read_line(timeout)
 
     def _expect_reply(self, reply, timeout=10000):
         """Reads line from FONA module and compares to reply from FONA module.
