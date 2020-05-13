@@ -516,7 +516,7 @@ class FONA:
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
             return False
 
-        if sim_storage: # ask how many SMS are stored
+        if sim_storage:  # ask how many SMS are stored
             if self._send_parse_reply(b"AT+CPMS?", FONA_SMS_STORAGE_SIM + b",", idx=1):
                 return self._buf
         else:
@@ -607,7 +607,7 @@ class FONA:
         self._read_line(100)  # table header
 
         allocated_socket = 0
-        for sock in range(0, FONA_MAX_SOCKETS): # check if INITIAL state
+        for sock in range(0, FONA_MAX_SOCKETS):  # check if INITIAL state
             self._read_line(100)
             self._parse_reply(b"C:", idx=5)
             if self._buf.strip('"') == "INITIAL" or self._buf.strip('"') == "CLOSED":
@@ -648,7 +648,7 @@ class FONA:
             return False
         self._read_line()
 
-        for state in range(0, sock_num + 1): # read "C: <n>" for each active connection
+        for state in range(0, sock_num + 1):  # read "C: <n>" for each active connection
             self._read_line()
             if state == sock_num:
                 break
@@ -899,9 +899,9 @@ class FONA:
                 if char == b"\r":
                     continue
                 if char == b"\n":
-                    if reply_idx == 0: # ignore first '\n'
+                    if reply_idx == 0:  # ignore first '\n'
                         continue
-                    if not multiline: # second '\n' is EOL
+                    if not multiline:  # second '\n' is EOL
                         timeout = 0
                         break
                 self._buf += char
