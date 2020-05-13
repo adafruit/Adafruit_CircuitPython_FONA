@@ -229,7 +229,6 @@ class FONA:
     @property
     def gprs(self):
         """Returns module's GPRS state."""
-        self._read_line()
 
         if not self._send_parse_reply(b"AT+CGATT?", b"+CGATT: ", ":"):
             return False
@@ -330,24 +329,15 @@ class FONA:
 
     @property
     def network_status(self):
-        """Returns cellular/network status"""
+        """Returns cellular network status"""
         if self._debug:
             print("Network status")
         if not self._send_parse_reply(b"AT+CREG?", b"+CREG: ", idx=1):
             return False
-        if self._buf == 0:  # Not Registered
-            return self._buf
-        if self._buf == 1:  # Registered (home)
-            return self._buf
-        if self._buf == 2:  # Not Registered (searching)
-            return self._buf
-        if self._buf == 3:  # Denied
-            return self._buf
-        if self._buf == 4:  # Unknown
-            return self._buf
-        if self._buf == 5:  # Registered Roaming
-            return self._buf
-        return False
+        status = self._buf
+        if not 0 <= self._buf <= 5:
+            status = -1
+        return status
 
     @property
     def rssi(self):
@@ -451,7 +441,6 @@ class FONA:
         """
         if self._debug:
             print("*** Get host by name")
-        self._read_line()
         if isinstance(hostname, str):
             hostname = bytes(hostname, "utf-8")
 
@@ -527,7 +516,7 @@ class FONA:
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
             return False
 
-        if sim_storage:  # ask how many SMS are stored
+        if sim_storage: # ask how many SMS are stored
             if self._send_parse_reply(b"AT+CPMS?", FONA_SMS_STORAGE_SIM + b",", idx=1):
                 return self._buf
         else:
@@ -562,7 +551,6 @@ class FONA:
         :param int sms_slot: SMS SIM or FONA memory slot number.
 
         """
-        self._read_line()
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
             return False
 
@@ -579,7 +567,6 @@ class FONA:
         :param int sms_slot: SMS SIM or FONA memory slot number.
 
         """
-        self._read_line()
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
             return False
         if not self._send_check_reply(b"AT+CSDH=1", reply=REPLY_OK):
@@ -620,7 +607,7 @@ class FONA:
         self._read_line(100)  # table header
 
         allocated_socket = 0
-        for sock in range(0, FONA_MAX_SOCKETS):  # check if INITIAL state
+        for sock in range(0, FONA_MAX_SOCKETS): # check if INITIAL state
             self._read_line(100)
             self._parse_reply(b"C:", idx=5)
             if self._buf.strip('"') == "INITIAL" or self._buf.strip('"') == "CLOSED":
@@ -661,7 +648,7 @@ class FONA:
             return False
         self._read_line()
 
-        for state in range(0, sock_num + 1):  # read "C: <n>" for each active connection
+        for state in range(0, sock_num + 1): # read "C: <n>" for each active connection
             self._read_line()
             if state == sock_num:
                 break
@@ -762,7 +749,6 @@ class FONA:
             sock_num < FONA_MAX_SOCKETS
         ), "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
-        self._read_line()
 
         self.uart_write(b"AT+CIPCLOSE=" + str(sock_num).encode() + b",")
         self.uart_write(str(quick_close).encode() + b"\r\n")
@@ -782,7 +768,6 @@ class FONA:
             sock_num < FONA_MAX_SOCKETS
         ), "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
-        self._read_line()
         if self._debug:
             print("* socket read")
 
@@ -806,7 +791,6 @@ class FONA:
         :param bytes buffer: Bytes to write to socket.
 
         """
-        self._read_line()
         self._read_line()
         assert (
             sock_num < FONA_MAX_SOCKETS
@@ -849,6 +833,7 @@ class FONA:
         :param str divider: Separator
 
         """
+        self._read_line()
         self._get_reply(send_data)
 
         if not self._parse_reply(reply_data, divider, idx):
@@ -914,9 +899,9 @@ class FONA:
                 if char == b"\r":
                     continue
                 if char == b"\n":
-                    if reply_idx == 0:  # ignore first '\n'
+                    if reply_idx == 0: # ignore first '\n'
                         continue
-                    if not multiline:  # second '\n' is EOL
+                    if not multiline: # second '\n' is EOL
                         timeout = 0
                         break
                 self._buf += char
@@ -945,6 +930,7 @@ class FONA:
         :param bytes reply: Expected response from module.
 
         """
+        self._read_line()
         if send is None:
             if not self._get_reply(prefix=prefix, suffix=suffix, timeout=timeout):
                 return False
