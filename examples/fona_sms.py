@@ -11,7 +11,7 @@ uart = busio.UART(board.TX, board.RX)
 rst = digitalio.DigitalInOut(board.D4)
 
 # Initialize FONA module (this may take a few seconds)
-fona = FONA(uart, rst, debug=False)
+fona = FONA(uart, rst)
 
 # Initialize Network
 while fona.network_status != 1:
