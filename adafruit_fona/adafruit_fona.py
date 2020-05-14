@@ -41,7 +41,7 @@ import time
 from micropython import const
 from simpleio import map_range
 
-__version__ = "0.0.0-auto.0"
+__version__ = "1.1.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_FONA.git"
 
 # pylint: disable=bad-whitespace
@@ -177,20 +177,8 @@ class FONA:
     @property
     # pylint: disable=too-many-return-statements
     def version(self):
-        """Returns FONA Version, as a string."""
-        if self._fona_type == FONA_800_L:
-            return "FONA 800L"
-        if self._fona_type == FONA_800_H:
-            return "FONA 800H"
-        if self._fona_type == FONA_808_V1:
-            return "FONA 808 (v1)"
-        if self._fona_type == FONA_808_V2:
-            return "FONA 808 (v2)"
-        if self._fona_type == FONA_3G_A:
-            return "FONA 3G (US)"
-        if self._fona_type == FONA_3G_E:
-            return "FONA 3G (EU)"
-        return -1
+        """Returns FONA Version."""
+        return self._fona_type
 
     @property
     def iemi(self):
@@ -466,6 +454,28 @@ class FONA:
         return bytes(octets)
 
     ### SMS ###
+
+    def available(self):
+        """Returns bytes in the in the input buffer avaliable to be read"""
+        return self._uart.in_waiting
+
+    @property
+    def enable_sms_notification(self):
+        """Returns status of new SMS message notifications"""
+        if not self._send_parse_reply(b"AT+CNMI?\r\n", b"+CNMI:", idx=1):
+            return False
+        return self._buf
+
+    @enable_sms_notification.setter
+    def enable_sms_notification(self, enable=True):
+        """Enables or disables new SMS message notifications."""
+        if enable:
+            if not self._send_check_reply(b"AT+CNMI=2,1\r\n", reply=REPLY_OK):
+                return False
+        else:
+            if not self._send_check_reply(b"AT+CNMI=2,0\r\n", reply=REPLY_OK):
+                return False
+        return True
 
     def send_sms(self, phone_number, message):
         """Sends a message SMS to a phone number.
