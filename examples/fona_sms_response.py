@@ -11,10 +11,7 @@ uart = busio.UART(board.TX, board.RX)
 rst = digitalio.DigitalInOut(board.D5)
 
 # Initialize FONA module (this may take a few seconds)
-fona = FONA(uart, rst)
-
-# Enable FONA debug output
-fona.debug=True
+fona = FONA(uart, rst, debug=True)
 
 # Initialize Network
 while fona.network_status != 1:
@@ -43,3 +40,14 @@ while True:
         sender, message = fona.read_sms(sms_slot)
         print("FROM: ", sender)
         print("MSG: ", message)
+
+        # Reply back!
+        print("Sending response...")
+        if not fona.send_sms(int(sender), "Hey, I got your text!"):
+            print("SMS Send Failed")
+        print("SMS Sent!")
+
+        # Delete the original message
+        if not fona.delete_sms(sms_slot):
+            print("Could not delete SMS in slot", sms_slot)
+        print("OK!")
