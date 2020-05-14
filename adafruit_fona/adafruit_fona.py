@@ -455,10 +455,6 @@ class FONA:
 
     ### SMS ###
 
-    def available(self):
-        """Returns bytes in the in the input buffer avaliable to be read"""
-        return self._uart.in_waiting
-
     @property
     def enable_sms_notification(self):
         """Returns status of new SMS message notifications"""
@@ -599,9 +595,11 @@ class FONA:
 
         self._buf = bytearray(sms_len)
         self._uart.readinto(self._buf)
+        message = bytes(self._buf).decode()
         self._uart.reset_input_buffer()
+        self._read_line()  # eat 'OK'
 
-        return sender, bytes(self._buf).decode()
+        return sender, message
 
     ### Socket API (TCP, UDP) ###
 
@@ -826,6 +824,20 @@ class FONA:
 
     ### UART Reply/Response Helpers ###
 
+    @property
+    def in_waiting(self):
+        """Returns number of bytes available to be read in the input buffer."""
+        return self._uart.in_waiting
+
+    def uart_readinto(self, buf):
+        """Reads len(buf) bytes into a provided buf.
+        :param bytearray buf: bytes object.
+        """
+        self._uart.readinto(buf)
+        if self._debug:
+            print("\tUARTREAD ::", buf)
+        return buf
+
     def uart_write(self, buffer):
         """UART ``write`` with optional debug that prints
         the buffer before sending.
@@ -925,7 +937,7 @@ class FONA:
         if self._debug:
             print("\tUARTREAD ::", self._buf.decode())
 
-        return reply_idx
+        return reply_idx, self._buf
 
     def _send_check_reply(
         self,
