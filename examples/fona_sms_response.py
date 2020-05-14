@@ -8,7 +8,7 @@ print("FONA SMS Response")
 
 # Create a serial connection for the FONA connection
 uart = busio.UART(board.TX, board.RX)
-rst = digitalio.DigitalInOut(board.D5)
+rst = digitalio.DigitalInOut(board.D4)
 
 # Initialize FONA module (this may take a few seconds)
 fona = FONA(uart, rst, debug=True)

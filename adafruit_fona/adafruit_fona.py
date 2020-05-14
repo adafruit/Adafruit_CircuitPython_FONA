@@ -41,7 +41,7 @@ import time
 from micropython import const
 from simpleio import map_range
 
-__version__ = "1.1.0"
+__version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_FONA.git"
 
 # pylint: disable=bad-whitespace
