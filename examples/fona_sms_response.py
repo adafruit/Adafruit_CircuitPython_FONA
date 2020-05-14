@@ -28,8 +28,8 @@ notification_buf = bytearray(64)
 
 print("FONA Ready!")
 while True:
-    if fona.in_waiting: # data is available from FONA
-        notification_buf = fona._read_line()[1]
+    if fona.in_waiting:  # data is available from FONA
+        notification_buf = fona.read_line()[1]
         # Split out the sms notification slot num.
         notification_buf = notification_buf.decode()
         sms_slot = notification_buf.split(",")[1]

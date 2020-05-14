@@ -597,7 +597,7 @@ class FONA:
         self._uart.readinto(self._buf)
         message = bytes(self._buf).decode()
         self._uart.reset_input_buffer()
-        self.read_line() # eat 'OK'
+        self.read_line()  # eat 'OK'
 
         return sender, message
 
