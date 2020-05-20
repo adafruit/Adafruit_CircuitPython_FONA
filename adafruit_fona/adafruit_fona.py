@@ -185,16 +185,16 @@ class FONA:
         return self._fona_type
 
     @property
-    def iemi(self):
-        """Returns FONA module's IEMI number."""
+    def imei(self):
+        """Returns FONA module's imei number."""
         if self._debug:
-            print("FONA IEMI")
+            print("FONA IMEI")
         self._uart.reset_input_buffer()
 
         self._uart_write(b"AT+GSN\r\n")
         self._read_line(multiline=True)
-        iemi = self._buf[0:15]
-        return iemi.decode("utf-8")
+        IMEI = self._buf[0:15]
+        return IMEI.decode("utf-8")
 
     @property
     def local_ip(self):
