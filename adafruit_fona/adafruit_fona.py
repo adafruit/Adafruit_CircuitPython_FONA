@@ -457,7 +457,6 @@ class FONA:
 
     ### SMS ###
 
-
     @property
     def enable_sms_notification(self):
         """Returns status of new SMS message notifications"""
@@ -481,16 +480,17 @@ class FONA:
         replies back with the a tuple containing (sender, message).
         """
         if not self.in_waiting:
-            return False
+            return False, False
 
         self.read_line()
         if not self._parse_reply(b"+CMTI: ", idx=1):
-            return False
-        sender, message = self.read_sms(self._buf)
+            return False, False
+        slot = self._buf
+        sender, message = self.read_sms(slot)
 
-        # delete the message to save memory
-        if not self.delete_sms(self._buf):
-            return False
+        # delete the message from the module to save memory
+        if not self.delete_sms(slot):
+            return False, False
 
         return sender, message.strip()
 
@@ -534,7 +534,6 @@ class FONA:
             return False
         return True
 
-    @property
     def num_sms(self, sim_storage=True):
         """Returns the number of SMS messages stored in memory, False if none stored.
 
