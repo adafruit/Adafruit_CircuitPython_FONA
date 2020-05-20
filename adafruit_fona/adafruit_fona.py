@@ -93,6 +93,7 @@ class FONA:
         self._rst = rst
         self._rst.switch_to_output()
         self._ri = ri
+        self._ri.switch_to_input()
         if not self._init_fona():
             raise RuntimeError("Unable to find FONA. Please check connections.")
 
@@ -473,12 +474,24 @@ class FONA:
         else:
             if not self._send_check_reply(b"AT+CNMI=2,0\r\n", reply=REPLY_OK):
                 return False
+
         return True
 
     def receive_sms(self):
         """Checks for a message notification from the FONA module,
         replies back with the a tuple containing (sender, message).
         """
+
+        if self._ri.value == False: # RI is active High
+            # TODO: Verify timer is around 120mS
+            timer = 120
+            pulses = []
+            while timer > 0:
+                print(self._ri.value)
+                timer -= 1
+                time.sleep(0.001)
+
+        # TODO: Make optional, rely on polling RI instead.
         if not self.in_waiting:
             return False, False
 
