@@ -64,7 +64,7 @@ FONA_3G_E = const(0x5)
 FONA_MAX_SOCKETS = const(6)
 
 FONA_SMS_STORAGE_SIM = b'"SM"'
-FONA_SMS_STORAGE_INTERNAL = b'"SM"'
+FONA_SMS_STORAGE_INTERNAL = b'"ME"'
 
 # pylint: enable=bad-whitespace
 
@@ -215,13 +215,11 @@ class FONA:
         self._uart_write(b"AT+CCID\r\n")
         self._read_line(timeout=2000)  # 6.2.23, 2sec max. response time
         iccid = self._buf.decode()
-        self._read_line()  # eat 'OK'
         return iccid
 
     @property
     def gprs(self):
         """Returns module's GPRS state."""
-
         if not self._send_parse_reply(b"AT+CGATT?", b"+CGATT: ", ":"):
             return False
         if not self._buf:
@@ -236,10 +234,6 @@ class FONA:
         """
         if enable:
             apn_name, apn_user, apn_pass = apn
-
-            apn_name = apn_name.encode()
-            apn_user = apn_user.encode()
-            apn_pass = apn_pass.encode()
 
             # enable multi connection mode (3,1)
             if not self._send_check_reply(b"AT+CIPMUX=1", reply=REPLY_OK):
@@ -268,19 +262,19 @@ class FONA:
             # Send command AT+SAPBR=3,1,"APN","<apn value>"
             # where <apn value> is the configured APN value.
             self._send_check_reply_quoted(
-                b'AT+SAPBR=3,1,"APN",', apn_name, REPLY_OK, 10000
+                b'AT+SAPBR=3,1,"APN",', apn_name.encode(), REPLY_OK, 10000
             )
 
             # send AT+CSTT,"apn","user","pass"
             self._uart.reset_input_buffer()
 
-            self._uart_write(b'AT+CSTT="' + apn_name)
+            self._uart_write(b'AT+CSTT="' + apn_name.encode())
 
             if apn_user is not None:
-                self._uart_write(b'","' + apn_user)
+                self._uart_write(b'","' + apn_user.encode())
 
             if apn_pass is not None:
-                self._uart_write(b'","' + apn_pass)
+                self._uart_write(b'","' + apn_pass.encode())
             self._uart_write(b'"\r\n')
 
             if not self._get_reply(REPLY_OK):
@@ -288,13 +282,13 @@ class FONA:
 
             # Set username
             if not self._send_check_reply_quoted(
-                b'AT+SAPBR=3,1,"USER",', apn_user, REPLY_OK, 10000
+                b'AT+SAPBR=3,1,"USER",', apn_user.encode(), REPLY_OK, 10000
             ):
                 return False
 
             # Set password
             if not self._send_check_reply_quoted(
-                b'AT+SAPBR=3,1,"PWD",', apn_pass, REPLY_OK, 100000
+                b'AT+SAPBR=3,1,"PWD",', apn_pass.encode(), REPLY_OK, 100000
             ):
                 return False
 
@@ -425,29 +419,6 @@ class FONA:
 
         return True
 
-    def get_host_by_name(self, hostname):
-        """Converts a hostname to a packed 4-byte IP address.
-        Returns a 4 bytearray.
-        :param str hostname: Destination server.
-
-        """
-        if self._debug:
-            print("*** Get host by name")
-        if isinstance(hostname, str):
-            hostname = bytes(hostname, "utf-8")
-
-        if not self._send_check_reply(
-            b'AT+CDNSGIP="' + hostname + b'"\r\n', reply=REPLY_OK
-        ):
-            return False
-
-        # attempt to parse a response
-        self._read_line()
-        while not self._parse_reply(b"+CDNSGIP:", idx=2):
-            self._read_line()
-
-        return self._buf
-
     def pretty_ip(self, ip):  # pylint: disable=no-self-use, invalid-name
         """Converts a bytearray IP address to a dotted-quad string for printing"""
         return "%d.%d.%d.%d" % (ip[0], ip[1], ip[2], ip[3])
@@ -542,8 +513,8 @@ class FONA:
 
     def num_sms(self, sim_storage=True):
         """Returns the number of SMS messages stored in memory, False if none stored.
-
         :param bool sim_storage: SMS storage on the SIM, otherwise internal storage on FONA chip.
+
         """
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
             return False
@@ -628,6 +599,27 @@ class FONA:
         return sender, message
 
     ### Socket API (TCP, UDP) ###
+
+    def get_host_by_name(self, hostname):
+        """Converts a hostname to a packed 4-byte IP address.
+        Returns a 4 bytearray.
+        :param str hostname: Destination server.
+
+        """
+        if self._debug:
+            print("*** Get host by name")
+        if isinstance(hostname, str):
+            hostname = bytes(hostname, "utf-8")
+
+        if not self._send_check_reply(
+            b'AT+CDNSGIP="' + hostname + b'"\r\n', reply=REPLY_OK
+        ):
+            return False
+
+        self._read_line()
+        while not self._parse_reply(b"+CDNSGIP:", idx=2):
+            self._read_line()
+        return self._buf
 
     def get_socket(self):
         """Returns an avaliable socket (INITIAL or CLOSED state).
