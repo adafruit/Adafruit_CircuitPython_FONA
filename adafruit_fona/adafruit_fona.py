@@ -73,7 +73,8 @@ FONA_SMS_STORAGE_INTERNAL = b'"SM"'
 class FONA:
     """CircuitPython FONA module interface.
     :param ~busio.uart UART: FONA UART connection.
-    :param ~digialio RST: FONA RST Pin.
+    :param ~digialio RST: FONA RST pin.
+    :param ~digialio RI: Optional FONA Ring Interrupt (RI) pin.
     :param bool debug: Enable debugging output.
 
     """
@@ -83,7 +84,7 @@ class FONA:
     UDP_MODE = const(1)
 
     # pylint: disable=too-many-arguments
-    def __init__(self, uart, rst, debug=False):
+    def __init__(self, uart, rst, ri=None, debug=False):
         self._buf = b""  # shared buffer
         self._fona_type = 0
         self._debug = debug
@@ -91,6 +92,7 @@ class FONA:
         self._uart = uart
         self._rst = rst
         self._rst.switch_to_output()
+        self._ri = ri
         if not self._init_fona():
             raise RuntimeError("Unable to find FONA. Please check connections.")
 
@@ -455,6 +457,7 @@ class FONA:
 
     ### SMS ###
 
+
     @property
     def enable_sms_notification(self):
         """Returns status of new SMS message notifications"""
@@ -472,6 +475,24 @@ class FONA:
             if not self._send_check_reply(b"AT+CNMI=2,0\r\n", reply=REPLY_OK):
                 return False
         return True
+
+    def receive_sms(self):
+        """Checks for a message notification from the FONA module,
+        replies back with the a tuple containing (sender, message).
+        """
+        if not self.in_waiting:
+            return False
+
+        self.read_line()
+        if not self._parse_reply(b"+CMTI: ", idx=1):
+            return False
+        sender, message = self.read_sms(self._buf)
+
+        # delete the message to save memory
+        if not self.delete_sms(self._buf):
+            return False
+
+        return sender, message.strip()
 
     def send_sms(self, phone_number, message):
         """Sends a message SMS to a phone number.
