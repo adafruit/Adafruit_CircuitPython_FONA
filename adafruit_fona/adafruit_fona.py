@@ -96,7 +96,7 @@ class FONA:
         if self._ri is not None:
             self._ri.switch_to_input()
         if not self._init_fona():
-            raise RuntimeError("Unable to find FONA. Please check connections.")
+                raise RuntimeError("Unable to find FONA. Please check connections.")
 
     # pylint: disable=too-many-branches, too-many-statements
     def _init_fona(self):
@@ -185,16 +185,16 @@ class FONA:
         return self._fona_type
 
     @property
-    def imei(self):
-        """Returns FONA module's imei number."""
+    def iemi(self):
+        """Returns FONA module's IEMI number."""
         if self._debug:
-            print("FONA IMEI")
+            print("FONA IEMI")
         self._uart.reset_input_buffer()
 
         self._uart_write(b"AT+GSN\r\n")
         self._read_line(multiline=True)
-        IMEI = self._buf[0:15]
-        return IMEI.decode("utf-8")
+        iemi = self._buf[0:15]
+        return iemi.decode("utf-8")
 
     @property
     def local_ip(self):
@@ -316,6 +316,7 @@ class FONA:
     @property
     def network_status(self):
         """Returns cellular network status"""
+        self._read_line()
         if self._debug:
             print("Network status")
         if not self._send_parse_reply(b"AT+CREG?", b"+CREG: ", idx=1):
@@ -367,13 +368,13 @@ class FONA:
                 status = 3  # assume 3D fix
             self._read_line()
         elif self._fona_type == FONA_3G_A or self._fona_type == FONA_3G_E:
-            raise NotImplementedError(
-                "FONA 3G not currently supported by this library."
-            )
+            self._get_reply(b"AT+CGPSINFO")
+            if self._buf == 0:
+                status = -1
+            if not self._buf[10] == ",":
+                status = 3 # 3D Fix
         else:
-            raise NotImplementedError(
-                "FONA 808 v1 not currently supported by this library."
-            )
+            status = 0
         return status
 
     @gps.setter
@@ -394,10 +395,12 @@ class FONA:
         if self._fona_type == FONA_808_V2:
             if not self._send_parse_reply(b"AT+CGPSPWR?", b"+CGPSPWR: ", ":"):
                 return False
-        self._read_line()
-        if not self._send_parse_reply(b"AT+CGNSPWR?", b"+CGNSPWR: ", ":"):
-            return False
-
+            self._read_line()
+            if not self._send_parse_reply(b"AT+CGNSPWR?", b"+CGNSPWR: ", ":"):
+                return False
+        elif self._fona_type == FONA_3G_A or self._fona_type == FONA_3G_E:
+            if not self._send_parse_reply(b"AT+CGPS?", b"+CGPS: "):
+                return False
         state = self._buf
 
         if gps_on and not state:
@@ -406,8 +409,11 @@ class FONA:
                 # try GNS
                 if not self._send_check_reply(b"AT+CGNSPWR=1", reply=REPLY_OK):
                     return False
-            else:
-                if not self._send_parse_reply(b"AT+CGPSPWR=1", reply_data=REPLY_OK):
+                else:
+                    if not self._send_parse_reply(b"AT+CGPSPWR=1", reply_data=REPLY_OK):
+                        return False
+            if self._fona_type == FONA_3G_A or self._fona_type == FONA_3G_E:
+                if not self._send_check_reply(b"AT+CGPS=1", reply=REPLY_OK):
                     return False
         else:
             if self._fona_type == FONA_808_V2:
@@ -416,7 +422,10 @@ class FONA:
                     return False
                 if not self._send_check_reply(b"AT+CGPSPWR=0", reply=REPLY_OK):
                     return False
-
+            elif self._fona_type == FONA_3G_A or self._fona_type == FONA_3G_E:
+                if not self._send_check_reply(b"AT+CGPS=0", reply=REPLY_OK):
+                    return False
+                self._read_line(2000) # eat '+CGPS: 0
         return True
 
     def pretty_ip(self, ip):  # pylint: disable=no-self-use, invalid-name
@@ -539,10 +548,12 @@ class FONA:
 
     def delete_all_sms(self):
         """Deletes all SMS messages on the FONA SIM."""
+
         self._read_line()
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
             return False
 
+        # TODO: Check FONA type for 3G, this needs to be refactored.
         if not self._send_check_reply(
             b'AT+CMGDA="DEL ALL"', reply=REPLY_OK, timeout=25000
         ):

@@ -28,38 +28,23 @@ rst = digitalio.DigitalInOut(board.D4)
 # Initialize FONA module (this may take a few seconds)
 fona = FONA(uart, rst)
 
-# initialize gsm
-gsm = GSM(fona, (secrets["apn"], secrets["apn_username"], secrets["apn_password"]))
-
-while not gsm.is_attached:
-    print("Attaching to network...")
-    time.sleep(0.5)
-
-while not gsm.is_connected:
+# Initialize Network
+while fona.network_status != 1:
     print("Connecting to network...")
-    gsm.connect()
-    time.sleep(5)
+    time.sleep(1)
+print("Connected to network!")
+print("RSSI: %ddB" % fona.rssi)
 
-print("My IP address is:", fona.local_ip)
-print("IP lookup adafruit.com: %s" % fona.get_host_by_name("adafruit.com"))
+# Text a number
+print("Sending SMS...")
+if not fona.send_sms(140404, "HELP"):
+    raise RuntimeError("FONA did not successfully send SMS")
+print("SMS Sent!")
 
-# Initialize a requests object with a socket and cellular interface
-requests.set_socket(cellular_socket, fona)
+# Ask the FONA how many SMS message it has
+num_sms = fona.num_sms
+print("%d SMS's on SIM Card" % num_sms)
 
-# fona._debug = True
-print("Fetching text from", TEXT_URL)
-r = requests.get(TEXT_URL)
-print("-" * 40)
-print(r.text)
-print("-" * 40)
-r.close()
-
-print()
-print("Fetching json from", JSON_URL)
-r = requests.get(JSON_URL)
-print("-" * 40)
-print(r.json())
-print("-" * 40)
-r.close()
-
-print("Done!")
+# Read out all the SMS messages on the FONA's SIM
+for slot in range(1, num_sms):
+    print(fona.read_sms(slot))
