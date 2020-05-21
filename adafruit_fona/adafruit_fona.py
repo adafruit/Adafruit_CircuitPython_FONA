@@ -86,7 +86,7 @@ class FONA:
     # pylint: disable=too-many-arguments
     def __init__(self, uart, rst, ri=None, debug=False):
         self._buf = b""  # shared buffer
-        self._fona_type = 0
+        self.type = 0
         self._debug = debug
 
         self._uart = uart
@@ -140,21 +140,21 @@ class FONA:
         self._read_line(multiline=True)
 
         if self._buf.find(b"SIM808 R14") != -1:
-            self._fona_type = FONA_808_V2
+            self.type = FONA_808_V2
         elif self._buf.find(b"SIM808 R13") != -1:
-            self._fona_type = FONA_808_V1
+            self.type = FONA_808_V1
         elif self._buf.find(b"SIMCOM_SIM5320A") != -1:
-            self._fona_type = FONA_3G_A
+            self.type = FONA_3G_A
         elif self._buf.find(b"SIMCOM_SIM5320E") != -1:
-            self._fona_type = FONA_3G_E
+            self.type = FONA_3G_E
 
-        if self._fona_type == FONA_800_L:
+        if self.type == FONA_800_L:
             # determine if SIM800H
             self._uart_write(b"AT+GMM\r\n")
             self._read_line(multiline=True)
 
             if self._buf.find(b"SIM800H") != -1:
-                self._fona_type = FONA_800_H
+                self.type = FONA_800_H
         return True
 
     def factory_reset(self):
@@ -182,7 +182,7 @@ class FONA:
     # pylint: disable=too-many-return-statements
     def version(self):
         """Returns FONA Version."""
-        return self._fona_type
+        return self.type
 
     @property
     def iemi(self):
@@ -355,7 +355,7 @@ class FONA:
         """Returns the GPS fix."""
         if self._debug:
             print("GPS Fix")
-        if self._fona_type == FONA_808_V2:
+        if self.type == FONA_808_V2:
             # 808 V2 uses GNS commands and doesn't have an explicit 2D/3D fix status.
             # Instead just look for a fix and if found assume it's a 3D fix.
             self._get_reply(b"AT+CGNSINF")
@@ -367,7 +367,7 @@ class FONA:
             if status == 1:
                 status = 3  # assume 3D fix
             self._read_line()
-        elif self._fona_type == FONA_3G_A or self._fona_type == FONA_3G_E:
+        elif self.type == FONA_3G_A or self.type == FONA_3G_E:
             self._get_reply(b"AT+CGPSINFO")
             if self._buf == 0:
                 status = -1
@@ -384,45 +384,45 @@ class FONA:
 
         """
         if not (
-            self._fona_type == FONA_3G_A
-            or self._fona_type == FONA_3G_E
-            or self._fona_type == FONA_808_V1
-            or self._fona_type == FONA_808_V2
+            self.type == FONA_3G_A
+            or self.type == FONA_3G_E
+            or self.type == FONA_808_V1
+            or self.type == FONA_808_V2
         ):
             raise TypeError("GPS unsupported for this FONA module.")
 
         # check if already enabled or disabled
-        if self._fona_type == FONA_808_V2:
+        if self.type == FONA_808_V2:
             if not self._send_parse_reply(b"AT+CGPSPWR?", b"+CGPSPWR: ", ":"):
                 return False
             self._read_line()
             if not self._send_parse_reply(b"AT+CGNSPWR?", b"+CGNSPWR: ", ":"):
                 return False
-        elif self._fona_type == FONA_3G_A or self._fona_type == FONA_3G_E:
+        elif self.type == FONA_3G_A or self.type == FONA_3G_E:
             if not self._send_parse_reply(b"AT+CGPS?", b"+CGPS: "):
                 return False
         state = self._buf
 
         if gps_on and not state:
             self._read_line()
-            if self._fona_type == FONA_808_V2:
+            if self.type == FONA_808_V2:
                 # try GNS
                 if not self._send_check_reply(b"AT+CGNSPWR=1", reply=REPLY_OK):
                     return False
                 else:
                     if not self._send_parse_reply(b"AT+CGPSPWR=1", reply_data=REPLY_OK):
                         return False
-            if self._fona_type == FONA_3G_A or self._fona_type == FONA_3G_E:
+            if self.type == FONA_3G_A or self.type == FONA_3G_E:
                 if not self._send_check_reply(b"AT+CGPS=1", reply=REPLY_OK):
                     return False
         else:
-            if self._fona_type == FONA_808_V2:
+            if self.type == FONA_808_V2:
                 # try GNS
                 if not self._send_check_reply(b"AT+CGNSPWR=0", reply=REPLY_OK):
                     return False
                 if not self._send_check_reply(b"AT+CGPSPWR=0", reply=REPLY_OK):
                     return False
-            elif self._fona_type == FONA_3G_A or self._fona_type == FONA_3G_E:
+            elif self.type == FONA_3G_A or self.type == FONA_3G_E:
                 if not self._send_check_reply(b"AT+CGPS=0", reply=REPLY_OK):
                     return False
                 self._read_line(2000) # eat '+CGPS: 0
@@ -505,7 +505,7 @@ class FONA:
         # write out message and ^z
         self._uart_write((message + chr(26)).encode())
 
-        if self._fona_type == FONA_3G_A or self._fona_type == FONA_3G_E:
+        if self.type == FONA_3G_A or self.type == FONA_3G_E:
             # eat 2x CRLF
             self._read_line(200)
             self._read_line(200)
@@ -546,20 +546,6 @@ class FONA:
             return self._buf
         return False
 
-    def delete_all_sms(self):
-        """Deletes all SMS messages on the FONA SIM."""
-
-        self._read_line()
-        if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
-            return False
-
-        # TODO: Check FONA type for 3G, this needs to be refactored.
-        if not self._send_check_reply(
-            b'AT+CMGDA="DEL ALL"', reply=REPLY_OK, timeout=25000
-        ):
-            return False
-        return True
-
     def delete_sms(self, sms_slot):
         """Deletes a SMS message in the provided SMS slot.
         :param int sms_slot: SMS SIM or FONA memory slot number.
@@ -573,6 +559,25 @@ class FONA:
         ):
             return False
 
+        return True
+
+    def delete_all_sms(self):
+        """Deletes all SMS messages on the FONA SIM."""
+
+        self._read_line()
+        if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
+            return False
+
+        if self.type == FONA_3G_A or self.type == FONA_3G_E:
+            num_sms = self.num_sms()
+            for slot in range(0, num_sms):
+                if not self.delete_sms(slot):
+                    return False
+        else: # DEL ALL on 808
+            if not self._send_check_reply(
+                b'AT+CMGDA="DEL ALL"', reply=REPLY_OK, timeout=25000
+            ):
+                return False
         return True
 
     def read_sms(self, sms_slot):
@@ -608,6 +613,7 @@ class FONA:
         self._read_line()  # eat 'OK'
 
         return sender, message
+
 
     ### Socket API (TCP, UDP) ###
 
