@@ -27,7 +27,7 @@ if not fona.send_sms(140404, "HELP"):
 print("SMS Sent!")
 
 # Ask the FONA how many SMS message it has
-num_sms = fona.num_sms
+num_sms = fona.num_sms()
 print("%d SMS's on SIM Card" % num_sms)
 
 # Read out all the SMS messages on the FONA's SIM
