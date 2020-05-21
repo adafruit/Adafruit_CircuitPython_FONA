@@ -26,10 +26,13 @@ if not fona.send_sms(140404, "HELP"):
     raise RuntimeError("FONA did not successfully send SMS")
 print("SMS Sent!")
 
-# Ask the FONA how many SMS message it has
+# Ask the FONA how many SMS message it has stored
 num_sms = fona.num_sms()
 print("%d SMS's on SIM Card" % num_sms)
 
-# Read out all the SMS messages on the FONA's SIM
-for slot in range(1, num_sms):
-    print(fona.read_sms(slot))
+if fona.type == 4 or fona.type == 5: # FONA 3G
+    for slot in range(0, num_sms):
+        print(fona.read_sms(slot))
+else: # FONA800, 808
+    for slot in range(1, num_sms):
+        print(fona.read_sms(slot))
