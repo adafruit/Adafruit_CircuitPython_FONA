@@ -355,7 +355,7 @@ class FONA:
         """Returns the GPS fix."""
         if self._debug:
             print("GPS Fix")
-        if self.type == FONA_808_V2:
+        if self._fona_type == FONA_808_V2:
             # 808 V2 uses GNS commands and doesn't have an explicit 2D/3D fix status.
             # Instead just look for a fix and if found assume it's a 3D fix.
             self._get_reply(b"AT+CGNSINF")
@@ -367,14 +367,10 @@ class FONA:
             if status == 1:
                 status = 3  # assume 3D fix
             self._read_line()
-        elif self.type == FONA_3G_A or self.type == FONA_3G_E:
-            self._get_reply(b"AT+CGPSINFO")
-            if self._buf == 0:
-                status = -1
-            if not self._buf[10] == ",":
-                status = 3  # 3D Fix
         else:
-            status = 0
+            raise NotImplementedError(
+                "FONA 808 v1 not currently supported by this library."
+            )
         return status
 
     @gps.setter
@@ -384,47 +380,40 @@ class FONA:
 
         """
         if not (
-            self.type == FONA_3G_A
-            or self.type == FONA_3G_E
-            or self.type == FONA_808_V1
-            or self.type == FONA_808_V2
+            self._fona_type == FONA_3G_A
+            or self._fona_type == FONA_3G_E
+            or self._fona_type == FONA_808_V1
+            or self._fona_type == FONA_808_V2
         ):
             raise TypeError("GPS unsupported for this FONA module.")
 
         # check if already enabled or disabled
-        if self.type == FONA_808_V2:
+        if self._fona_type == FONA_808_V2:
             if not self._send_parse_reply(b"AT+CGPSPWR?", b"+CGPSPWR: ", ":"):
                 return False
-            self._read_line()
-            if not self._send_parse_reply(b"AT+CGNSPWR?", b"+CGNSPWR: ", ":"):
-                return False
-        elif self.type == FONA_3G_A or self.type == FONA_3G_E:
-            if not self._send_parse_reply(b"AT+CGPS?", b"+CGPS: "):
-                return False
+        self._read_line()
+        if not self._send_parse_reply(b"AT+CGNSPWR?", b"+CGNSPWR: ", ":"):
+            return False
+
         state = self._buf
 
         if gps_on and not state:
             self._read_line()
-            if self.type == FONA_808_V2:
+            if self._fona_type == FONA_808_V2:
                 # try GNS
                 if not self._send_check_reply(b"AT+CGNSPWR=1", reply=REPLY_OK):
                     return False
+            else:
                 if not self._send_parse_reply(b"AT+CGPSPWR=1", reply_data=REPLY_OK):
                     return False
-            if self.type == FONA_3G_A or self.type == FONA_3G_E:
-                if not self._send_check_reply(b"AT+CGPS=1", reply=REPLY_OK):
-                    return False
         else:
-            if self.type == FONA_808_V2:
+            if self._fona_type == FONA_808_V2:
                 # try GNS
                 if not self._send_check_reply(b"AT+CGNSPWR=0", reply=REPLY_OK):
                     return False
                 if not self._send_check_reply(b"AT+CGPSPWR=0", reply=REPLY_OK):
                     return False
-            elif self.type == FONA_3G_A or self.type == FONA_3G_E:
-                if not self._send_check_reply(b"AT+CGPS=0", reply=REPLY_OK):
-                    return False
-                self._read_line(2000)  # eat '+CGPS: 0
+
         return True
 
     def pretty_ip(self, ip):  # pylint: disable=no-self-use, invalid-name

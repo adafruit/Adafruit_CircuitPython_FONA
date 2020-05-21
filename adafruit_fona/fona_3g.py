@@ -52,3 +52,39 @@ class FONA3G(FONA):
         if not super()._send_check_reply(b"AT+IPREX=" + str(baudrate).encode(), reply=REPLY_OK):
             return False
         return True
+    
+    @property
+    def gps(self):
+        """Returns the FONA 3G's GPS Fix."""
+        if self._debug:
+            print("* GPS Status")
+        
+        super()._get_reply(b"AT+CGPSINFO")
+        
+        if self._buf == 0:
+            return -1
+        if not self._buf[10] == ",":
+            return 3 # 3D fix
+        return 0
+
+    @gps.setter
+    def gps(self, gps_on=False):
+        """Sets GPS module power, parses returned buffer.
+        :param bool gps_on: Enables the GPS module, disabled by default.
+
+        """
+        # check if GPS is already enabled
+        if not super()._send_parse_reply(b"AT+CGPS?", b"+CGPS: "):
+            return False
+        
+        state = self._buf
+
+        if gps_on and not state:
+            super._read_line()
+            if not super()._send_check_reply(b"AT+CGPS=1", reply=REPLY_OK):
+                return False
+        else:
+            if not super()._send_check_reply(b"AT+CGPS=0", reply=REPLY_OK):
+                return False
+            super._read_line(2000) # eat '+CGPS: 0'
+        return True
