@@ -96,7 +96,7 @@ class FONA:
         if self._ri is not None:
             self._ri.switch_to_input()
         if not self._init_fona():
-                raise RuntimeError("Unable to find FONA. Please check connections.")
+            raise RuntimeError("Unable to find FONA. Please check connections.")
 
     # pylint: disable=too-many-branches, too-many-statements
     def _init_fona(self):
@@ -372,7 +372,7 @@ class FONA:
             if self._buf == 0:
                 status = -1
             if not self._buf[10] == ",":
-                status = 3 # 3D Fix
+                status = 3  # 3D Fix
         else:
             status = 0
         return status
@@ -409,9 +409,8 @@ class FONA:
                 # try GNS
                 if not self._send_check_reply(b"AT+CGNSPWR=1", reply=REPLY_OK):
                     return False
-                else:
-                    if not self._send_parse_reply(b"AT+CGPSPWR=1", reply_data=REPLY_OK):
-                        return False
+                if not self._send_parse_reply(b"AT+CGPSPWR=1", reply_data=REPLY_OK):
+                    return False
             if self.type == FONA_3G_A or self.type == FONA_3G_E:
                 if not self._send_check_reply(b"AT+CGPS=1", reply=REPLY_OK):
                     return False
@@ -425,7 +424,7 @@ class FONA:
             elif self.type == FONA_3G_A or self.type == FONA_3G_E:
                 if not self._send_check_reply(b"AT+CGPS=0", reply=REPLY_OK):
                     return False
-                self._read_line(2000) # eat '+CGPS: 0
+                self._read_line(2000)  # eat '+CGPS: 0
         return True
 
     def pretty_ip(self, ip):  # pylint: disable=no-self-use, invalid-name
@@ -462,20 +461,20 @@ class FONA:
         replies back with the a tuple containing (sender, message).
 
         """
-        if self._ri is not None: # poll the RI pin
+        if self._ri is not None:  # poll the RI pin
             if not self._ri.value:
                 return False, False
-        else: # poll the UART instead
+        else:  # poll the UART instead
             if not self._uart.in_waiting:
                 return False, False
 
-        self._read_line() # parse the rcv'd URC
+        self._read_line()  # parse the rcv'd URC
         if not self._parse_reply(b"+CMTI: ", idx=1):
             return False, False
         slot = self._buf
         sender, message = self.read_sms(slot)
 
-        if not self.delete_sms(slot): # delete sms from module memory
+        if not self.delete_sms(slot):  # delete sms from module memory
             return False, False
 
         return sender, message.strip()
@@ -573,7 +572,7 @@ class FONA:
             for slot in range(0, num_sms):
                 if not self.delete_sms(slot):
                     return False
-        else: # DEL ALL on 808
+        else:  # DEL ALL on 808
             if not self._send_check_reply(
                 b'AT+CMGDA="DEL ALL"', reply=REPLY_OK, timeout=25000
             ):
@@ -613,7 +612,6 @@ class FONA:
         self._read_line()  # eat 'OK'
 
         return sender, message
-
 
     ### Socket API (TCP, UDP) ###
 

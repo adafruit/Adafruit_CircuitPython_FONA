@@ -30,9 +30,9 @@ print("SMS Sent!")
 num_sms = fona.num_sms()
 print("%d SMS's on SIM Card" % num_sms)
 
-if fona.type == 4 or fona.type == 5: # FONA 3G
+if fona.type == 4 or fona.type == 5:  # FONA 3G
     for slot in range(0, num_sms):
         print(fona.read_sms(slot))
-else: # FONA800, 808
+else:  # FONA800, 808
     for slot in range(1, num_sms):
         print(fona.read_sms(slot))
