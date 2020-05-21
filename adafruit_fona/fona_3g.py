@@ -87,4 +87,15 @@ class FONA3G(FONA):
             if not super()._send_check_reply(b"AT+CGPS=0", reply=REPLY_OK):
                 return False
             super._read_line(2000) # eat '+CGPS: 0'
+
+        return True
+
+    @property
+    def ue_system_info(self):
+        """Returns True if UE system is online, otherwise False."""
+        super()._read_line()
+        if not super()._send_parse_reply(b"AT+CPSI?\r\n", b"+CPSI: ", idx=1):
+            return False
+        if not self._buf == "Online": # 5.15
+            return False
         return True
