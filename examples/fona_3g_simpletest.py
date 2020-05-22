@@ -32,14 +32,24 @@ cdma = CDMA(fona, (secrets["apn"], secrets["apn_username"], secrets["apn_passwor
 while not cdma.is_attached:
     print("Attaching to network...")
     time.sleep(0.5)
-
 print("Attached!")
 
 while not cdma.is_connected:
     print("Connecting to network...")
     cdma.connect()
     time.sleep(0.5)
-
-print("OK!")
+print("Network Connected!")
 
 print("My IP address is:", fona.local_ip)
+print("IP lookup adafruit.com: %s" % fona.get_host_by_name("adafruit.com"))
+
+# Initialize a requests object with a socket and cellular interface
+requests.set_socket(cellular_socket, fona)
+
+# fona._debug = True
+print("Fetching text from", TEXT_URL)
+r = requests.get(TEXT_URL)
+print("-" * 40)
+print(r.text)
+print("-" * 40)
+r.close()

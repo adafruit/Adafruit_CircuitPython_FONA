@@ -88,6 +88,7 @@ class FONA:
         self._buf = b""  # shared buffer
         self.type = 0
         self._debug = debug
+        self._fona_type = 0
 
         self._uart = uart
         self._rst = rst
@@ -418,6 +419,7 @@ class FONA:
 
     def pretty_ip(self, ip):  # pylint: disable=no-self-use, invalid-name
         """Converts a bytearray IP address to a dotted-quad string for printing"""
+
         return "%d.%d.%d.%d" % (ip[0], ip[1], ip[2], ip[3])
 
     def unpretty_ip(self, ip):  # pylint: disable=no-self-use, invalid-name
@@ -739,13 +741,6 @@ class FONA:
             sock_num < FONA_MAX_SOCKETS
         ), "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
-
-        if self._debug:
-            print(
-                "* FONA socket connect, socket={}, protocol={}, port={}, ip={}".format(
-                    sock_num, conn_mode, port, dest
-                )
-            )
 
         # Query local IP Address
         self._uart_write(b"AT+CIFSR\r\n")

@@ -47,13 +47,24 @@ __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_FONA.git"
 
 FONA_MAX_SOCKETS = const(10)
 
+
 class FONA3G(FONA):
+    """FONA 3G module interface.
+    :param ~busio.uart UART: FONA UART connection.
+    :param ~digialio RST: FONA RST pin.
+    :param ~digialio RI: Optional FONA Ring Interrupt (RI) pin.
+    :param bool debug: Enable debugging output.
+
+    """
+
     def __init__(self, uart, rst, ri=None, debug=False):
         super(FONA3G, self).__init__(uart, rst, ri, debug)
-    
+
     def set_baudrate(self, baudrate):
         """Sets the FONA's UART baudrate."""
-        if not super()._send_check_reply(b"AT+IPREX=" + str(baudrate).encode(), reply=REPLY_OK):
+        if not super()._send_check_reply(
+            b"AT+IPREX=" + str(baudrate).encode(), reply=REPLY_OK
+        ):
             return False
         return True
 
@@ -83,15 +94,14 @@ class FONA3G(FONA):
         else:
             if not super()._send_check_reply(b"AT+CGPS=0", reply=REPLY_OK):
                 return False
-            super()._read_line(2000) # eat '+CGPS: 0'
+            super()._read_line(2000)  # eat '+CGPS: 0'
         return True
 
     @property
     def ue_system_info(self):
         """Returns True if UE system is online, otherwise False."""
-        if not super()._send_parse_reply(b"AT+CPSI?\r\n", b"+CPSI: "):
-            return False
-        if not self._buf == "GSM" or self._buf == 'WCDMA': # 5.15
+        super()._send_parse_reply(b"AT+CPSI?\r\n", b"+CPSI: ")
+        if not self._buf == "GSM" or self._buf == "WCDMA":  # 5.15
             return False
         return True
 
@@ -102,33 +112,42 @@ class FONA3G(FONA):
             return False
         return self._buf
 
+    # pylint: disable=too-many-return-statements
     def set_gprs(self, apn=None, enable=True):
         """Configures and brings up GPRS.
         :param bool enable: Enables or disables GPRS.
 
         """
         if enable:
-            if not super()._send_check_reply(b"AT+CGATT=1", reply=REPLY_OK, timeout=10000):
+            if not super()._send_check_reply(
+                b"AT+CGATT=1", reply=REPLY_OK, timeout=10000
+            ):
                 return False
 
-            if apn is not None: # Configure APN
+            if apn is not None:  # Configure APN
                 apn_name, apn_user, apn_pass = apn
-                if not super()._send_check_reply_quoted(b"AT+CGSOCKCONT=1,\"IP\",", apn_name.encode(), REPLY_OK, 10000):
+                if not super()._send_check_reply_quoted(
+                    b'AT+CGSOCKCONT=1,"IP",', apn_name.encode(), REPLY_OK, 10000
+                ):
                     return False
                 # TODO: Only implement if user/pass are provided
                 super()._uart_write(b"AT+CGAUTH=1,1,")
-                super()._uart_write(b"\"" + apn_pass.encode() + b"\"")
-                super()._uart_write(b",\"" + apn_user.encode() + b"\"\r\n")
+                super()._uart_write(b'"' + apn_pass.encode() + b'"')
+                super()._uart_write(b',"' + apn_user.encode() + b'"\r\n')
 
             if not super()._get_reply(REPLY_OK, timeout=10000):
                 return False
 
             # Enable PDP Context
-            if not self._send_check_reply(b"AT+CIPMODE=1", reply=REPLY_OK, timeout=10000): # Transparent mode
+            if not self._send_check_reply(
+                b"AT+CIPMODE=1", reply=REPLY_OK, timeout=10000
+            ):  # Transparent mode
                 return False
-            
+
             # TODO: Not sure if this is multi-client, check this out
-            if not self._send_check_reply(b"AT+NETOPEN=,,1", reply=b"Network opened", timeout=10000):
+            if not self._send_check_reply(
+                b"AT+NETOPEN=,,1", reply=b"Network opened", timeout=10000
+            ):
                 return False
             self._read_line()
 
@@ -153,9 +172,9 @@ class FONA3G(FONA):
         if isinstance(hostname, str):
             hostname = bytes(hostname, "utf-8")
 
-        super()._uart_write(b"AT+CDNSGIP=\"" + hostname + b"\"\r\n")
+        super()._uart_write(b'AT+CDNSGIP="' + hostname + b'"\r\n')
         self._read_line()
-        self._read_line(10000) # Read the +CDNSGIP, takes a while
+        self._read_line(10000)  # Read the +CDNSGIP, takes a while
 
         if not self._parse_reply(b"+CDNSGIP: ", idx=2):
             return False
@@ -166,24 +185,24 @@ class FONA3G(FONA):
         """
         if self._debug:
             print("*** Get socket")
-        
-        self._read_line()
-        self._uart_write(b"AT+CIPOPEN?\r\n") # Query which sockets are busy
 
-        for socket in range (0, FONA_MAX_SOCKETS):
+        self._read_line()
+        self._uart_write(b"AT+CIPOPEN?\r\n")  # Query which sockets are busy
+
+        for socket in range(0, FONA_MAX_SOCKETS):
             self._read_line()
-            try: # SIMCOM5320 lacks a socket connection status, this is a workaround
+            try:  # SIMCOM5320 lacks a socket connection status, this is a workaround
                 self._parse_reply(b"+CIPOPEN: ", idx=1)
-            except:
+            except IndexError:
                 break
 
         for _ in range(socket, FONA_MAX_SOCKETS):
-            self._read_line() # eat the rest of '+CIPOPEN' responses
+            self._read_line()  # eat the rest of '+CIPOPEN' responses
 
         if self._debug:
             print("Allocated socket #%d" % socket)
         return socket
-    
+
     def socket_connect(self, sock_num, dest, port, conn_mode=0):
         """Connects to a destination IP address or hostname.
         By default, we use conn_mode TCP_MODE but we may also use UDP_MODE.
@@ -211,8 +230,8 @@ class FONA3G(FONA):
             self._uart_write(b',"TCP","')
         else:
             self._uart_write(b',"UDP","')
-        self._uart_write(dest.encode() + b'",' + str(port).encode() + b'\r\n')
-        
+        self._uart_write(dest.encode() + b'",' + str(port).encode() + b"\r\n")
+
         if not self._expect_reply(b"Connect ok"):
             return False
         return True
