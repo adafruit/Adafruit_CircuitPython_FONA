@@ -22,7 +22,7 @@
 # THE SOFTWARE.
 """
 :py:class:`~adafruit_fona.fona_3g.FONA3G`
-`adafruit_fona`
+`adafruit_fona_3g`
 ================================================================================
 
 FONA3G cellular module instance.
@@ -83,10 +83,48 @@ class FONA3G(FONA):
             super()._read_line(2000) # eat '+CGPS: 0'
         return True
 
+    @property
     def ue_system_info(self):
         """Returns True if UE system is online, otherwise False."""
-        if not super()._send_parse_reply(b"AT+CPSI?\r\n", b"+CPSI: ", idx=1):
+        if not super()._send_parse_reply(b"AT+CPSI?\r\n", b"+CPSI: "):
             return False
-        if not self._buf == "Online": # 5.15
+        if not self._buf == "GSM" or self._buf == 'WCDMA': # 5.15
             return False
+        print("OK")
         return True
+    
+    def set_gprs(self, apn=None, enable=True):
+        """Configures and brings up GPRS.
+        :param bool enable: Enables or disables GPRS.
+
+        """
+        if enable:
+            if not super()._send_check_reply(b"AT+CGATT=1", reply=REPLY_OK, timeout=10000):
+                return False
+
+            if apn is not None: # Configure APN
+                apn_name, apn_user, apn_pass = apn
+                if not super()._send_check_reply_quoted(b"AT+CGSOCKCONT=1,\"IP\",", apn_name.encode(), REPLY_OK, 10000):
+                    return False
+                # TODO: Only implement if user/pass are provided
+                super()._uart_write(b"AT+CGAUTH=1,1,")
+                super()._uart_write(b"\"" + apn_pass.encode() + b"\"")
+                super()._uart_write(b",\"" + apn_user.encode() + b"\"\r\n")
+
+            if not super()._get_reply(REPLY_OK, timeout=10000):
+                return False
+
+            # Enable PDP Context
+            if not self._send_check_reply(b"AT+CIPMODE=1", reply=REPLY_OK, timeout=10000): # Transparent mode
+                return False
+            
+            if not self._send_check_reply(b"AT+NETOPEN=,,1", reply=b"Network opened"):
+                return False
+        else:
+            # reset PDP state
+            if not self._send_check_reply(
+                b"AT+CIPSHUT", reply=b"SHUT OK", timeout=20000
+            ):
+                return False
+        return True
+
