@@ -20,25 +20,74 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 """
-:py:class:`~adafruit_fona.fona_cdma.CDMA`
-`adafruit_fona_cdma`
+`adafruit_fona_CDMA`
 =================================================================================
 
-Interface for 2G/3G CDMA cellular modules.
+Interface for 3G CDMA cellular modems (SIMCOM SIM5320)
 
 * Author(s): Brent Rubell
 
 """
 
-from .adafruit_fona_gsm import GSM
 
-class CDMA(GSM):
+class CDMA:
+    """Interface for interacting with 3G CDMA modems.
+    """
+
     def __init__(self, fona_3g, apn):
-        super(CDMA, self).__init__(fona_3g, apn)
+        """Initializes interface with 3G CDMA Modem
+        :param adafruit_fona fona: The Adafruit FONA 3G module we are using.
+        :param tuple apn: Tuple containing APN name, (optional) APN username,
+                            and APN password.
+
+        """
+        self._iface = fona_3g
+        self._apn = apn
+        self._gsm_connected = False
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        self.disconnect()
+
+    @property
+    def imei(self):
+        """Returns the GSM modem's IEMI number, as a string."""
+        return self._iface.iemi
+
+    @property
+    def iccid(self):
+        """Returns the SIM card's ICCID, as a string."""
+        return self._iface.iccid
 
     @property
     def is_attached(self):
-        """Returns if the modem is attached to the network and online."""
-        if super()._iface.network_status == 1 and super()._iface.ue_system_info() == 1:
+        """Returns if the modem is attached to the network
+        and the GPS has a fix."""
+        if self._iface.ue_system_info == 1 and self._iface.network_status == 1:
             return True
         return False
+
+    @property
+    def is_connected(self):
+        """Returns if attached to GSM
+        and an IP Addresss was obtained.
+
+        """
+        if not self._gsm_connected:
+            return False
+        return True
+
+    def connect(self):
+        """Connect to GSM network."""
+        if self._iface.set_gprs(self._apn, True):
+            self._gsm_connected = True
+        else:
+            # reset context for next connection attempt
+            self._iface.set_gprs(self._apn, False)
+
+    def disconnect(self):
+        """Disconnect from GSM network."""
+        self._iface.set_gprs(self._apn, False)
+        self._gsm_connected = False
