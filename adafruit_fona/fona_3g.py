@@ -53,7 +53,6 @@ class FONA3G(FONA):
             return False
         return True
 
-
     @property
     def gps(self):
         """Returns True if the GPS session is active, False if it's stopped.."""
@@ -70,7 +69,7 @@ class FONA3G(FONA):
         # check if GPS is already enabled
         if not super()._send_parse_reply(b"AT+CGPS?", b"+CGPS: "):
             return False
-        
+
         state = self._buf
 
         if gps_on and not state:
@@ -90,7 +89,6 @@ class FONA3G(FONA):
             return False
         if not self._buf == "GSM" or self._buf == 'WCDMA': # 5.15
             return False
-        print("OK")
         return True
 
     @property
@@ -135,7 +133,7 @@ class FONA3G(FONA):
         else:
             # reset PDP state
             if not self._send_check_reply(
-                b"AT+CIPSHUT", reply=b"SHUT OK", timeout=20000
+                b"AT+NETCLOSE", reply=b"Network closed", timeout=20000
             ):
                 return False
         return True
