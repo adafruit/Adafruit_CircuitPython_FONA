@@ -118,8 +118,10 @@ class FONA3G(FONA):
             if not self._send_check_reply(b"AT+CIPMODE=1", reply=REPLY_OK, timeout=10000): # Transparent mode
                 return False
             
-            if not self._send_check_reply(b"AT+NETOPEN=,,1", reply=b"Network opened"):
+            # TODO: Not sure if this is multi-client, check this out
+            if not self._send_check_reply(b"AT+NETOPEN=,,1", reply=b"Network opened", timeout=10000):
                 return False
+            self._read_line()
         else:
             # reset PDP state
             if not self._send_check_reply(
