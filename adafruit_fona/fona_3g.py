@@ -39,7 +39,7 @@ Implementation Notes
 
 """
 
-from .adafruit_fona import FONA
+from .adafruit_fona import FONA, REPLY_OK
 
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_FONA.git"
@@ -52,20 +52,14 @@ class FONA3G(FONA):
         if not super()._send_check_reply(b"AT+IPREX=" + str(baudrate).encode(), reply=REPLY_OK):
             return False
         return True
-    
+
+
     @property
     def gps(self):
-        """Returns the FONA 3G's GPS Fix."""
-        if self._debug:
-            print("* GPS Status")
-        
-        super()._get_reply(b"AT+CGPSINFO")
-        
-        if self._buf == 0:
-            return -1
-        if not self._buf[10] == ",":
-            return 3 # 3D fix
-        return 0
+        """Returns True if the GPS session is active, False if it's stopped.."""
+        if not super()._send_check_reply(b"AT+CGPS?", reply=b"+CGPS: 1,1"):
+            return False
+        return True
 
     @gps.setter
     def gps(self, gps_on=False):
@@ -80,20 +74,17 @@ class FONA3G(FONA):
         state = self._buf
 
         if gps_on and not state:
-            super._read_line()
+            super()._read_line()
             if not super()._send_check_reply(b"AT+CGPS=1", reply=REPLY_OK):
                 return False
         else:
             if not super()._send_check_reply(b"AT+CGPS=0", reply=REPLY_OK):
                 return False
-            super._read_line(2000) # eat '+CGPS: 0'
-
+            super()._read_line(2000) # eat '+CGPS: 0'
         return True
 
-    @property
     def ue_system_info(self):
         """Returns True if UE system is online, otherwise False."""
-        super()._read_line()
         if not super()._send_parse_reply(b"AT+CPSI?\r\n", b"+CPSI: ", idx=1):
             return False
         if not self._buf == "Online": # 5.15
