@@ -183,3 +183,36 @@ class FONA3G(FONA):
         if self._debug:
             print("Allocated socket #%d" % socket)
         return socket
+    
+    def socket_connect(self, sock_num, dest, port, conn_mode=0):
+        """Connects to a destination IP address or hostname.
+        By default, we use conn_mode TCP_MODE but we may also use UDP_MODE.
+        :param int sock_num: Desired socket number
+        :param str dest: Destination dest address.
+        :param int port: Destination dest port.
+        :param int conn_mode: Connection mode (TCP/UDP)
+
+        """
+        if self._debug:
+            print(
+                "*** Socket connect, protocol={}, port={}, ip={}".format(
+                    conn_mode, port, dest
+                )
+            )
+
+        self._uart.reset_input_buffer()
+        assert (
+            sock_num < FONA_MAX_SOCKETS
+        ), "Provided socket exceeds the maximum number of \
+                                             sockets for the FONA module."
+
+        self._uart_write(b"AT+CIPOPEN=" + str(sock_num).encode())
+        if conn_mode == 0:
+            self._uart_write(b',"TCP","')
+        else:
+            self._uart_write(b',"UDP","')
+        self._uart_write(dest.encode() + b'",' + str(port).encode() + b'\r\n')
+        
+        if not self._expect_reply(b"Connect ok"):
+            return False
+        return True
