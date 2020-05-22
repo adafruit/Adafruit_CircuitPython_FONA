@@ -92,7 +92,14 @@ class FONA3G(FONA):
             return False
         print("OK")
         return True
-    
+
+    @property
+    def local_ip(self):
+        """Returns the IP address of the current active socket."""
+        if not super()._send_parse_reply(b"AT+IPADDR", b"+IPADDR:"):
+            return False
+        return self._buf
+
     def set_gprs(self, apn=None, enable=True):
         """Configures and brings up GPRS.
         :param bool enable: Enables or disables GPRS.
@@ -122,6 +129,9 @@ class FONA3G(FONA):
             if not self._send_check_reply(b"AT+NETOPEN=,,1", reply=b"Network opened", timeout=10000):
                 return False
             self._read_line()
+
+            if not self.local_ip:
+                return True
         else:
             # reset PDP state
             if not self._send_check_reply(
