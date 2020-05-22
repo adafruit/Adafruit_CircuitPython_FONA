@@ -38,11 +38,15 @@ Implementation Notes
   https://github.com/adafruit/circuitpython/releases
 
 """
-
+from micropython import const
 from .adafruit_fona import FONA, REPLY_OK
+
 
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_FONA.git"
+
+FONA_MAX_SOCKETS = const(10)
+
 class FONA3G(FONA):
     def __init__(self, uart, rst, ri=None, debug=False):
         super(FONA3G, self).__init__(uart, rst, ri, debug)
@@ -156,3 +160,26 @@ class FONA3G(FONA):
         if not self._parse_reply(b"+CDNSGIP: ", idx=2):
             return False
         return self._buf
+
+    def get_socket(self):
+        """Returns if a socket is not in use.
+        """
+        if self._debug:
+            print("*** Get socket")
+        
+        self._read_line()
+        self._uart_write(b"AT+CIPOPEN?\r\n") # Query which sockets are busy
+
+        for socket in range (0, FONA_MAX_SOCKETS):
+            self._read_line()
+            try: # SIMCOM5320 lacks a socket connection status, this is a workaround
+                self._parse_reply(b"+CIPOPEN: ", idx=1)
+            except:
+                break
+
+        for _ in range(socket, FONA_MAX_SOCKETS):
+            self._read_line() # eat the rest of '+CIPOPEN' responses
+
+        if self._debug:
+            print("Allocated socket #%d" % socket)
+        return socket
