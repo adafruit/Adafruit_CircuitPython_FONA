@@ -155,13 +155,10 @@ class FONA3G(FONA):
                 return True
         else:
             # reset PDP state
-            """
             if not self._send_check_reply(
                 b"AT+NETCLOSE", reply=b"Network closed", timeout=20000
             ):
                 return False
-            """
-            return False
         return True
 
     ### Socket API (TCP, UDP) ###
@@ -184,8 +181,7 @@ class FONA3G(FONA):
         return self._buf
 
     def get_socket(self):
-        """Returns if a socket is not in use.
-        """
+        """Returns an unused socket."""
         if self._debug:
             print("*** Get socket")
 
@@ -256,3 +252,31 @@ class FONA3G(FONA):
         for _ in range(sock_num, FONA_MAX_SOCKETS):
             self._read_line()  # eat the rest of '+CIPOPEN' responses
         return ip_addr
+
+    def socket_write(self, sock_num, buffer):
+        """Writes bytes to the socket.
+        :param int sock_num: Desired socket number to write to.
+        :param bytes buffer: Bytes to write to socket.
+
+        """
+        assert (
+            sock_num < FONA_MAX_SOCKETS
+        ), "Provided socket exceeds the maximum number of \
+                                             sockets for the FONA module."
+
+        self._uart.reset_input_buffer()
+        self._uart_write(b"AT+CIPSEND=" + str(sock_num).encode() + b"," + str(len(buffer)).encode() + b"\r\n")
+        self._read_line()
+
+        if self._buf[0] != 62:
+            # promoting mark ('>') not found
+            return False
+
+        self._uart_write(buffer + b"\r\n")
+        self._read_line() # eat 'OK'
+        self._read_line(10000) # wait for 'Send OK'
+
+        if "Send ok" not in self._buf.decode():
+            return False
+
+        return True
