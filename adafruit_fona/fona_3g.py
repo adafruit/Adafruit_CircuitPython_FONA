@@ -155,10 +155,13 @@ class FONA3G(FONA):
                 return True
         else:
             # reset PDP state
+            """
             if not self._send_check_reply(
                 b"AT+NETCLOSE", reply=b"Network closed", timeout=20000
             ):
                 return False
+            """
+            return False
         return True
 
     ### Socket API (TCP, UDP) ###
@@ -235,3 +238,21 @@ class FONA3G(FONA):
         if not self._expect_reply(b"Connect ok"):
             return False
         return True
+    
+    def remote_ip(self, sock_num):
+        """Returns the IP address of sender."""
+        self._read_line()
+        assert (
+            sock_num < FONA_MAX_SOCKETS
+        ), "Provided socket exceeds the maximum number of \
+                                             sockets for the FONA module."
+
+        self._uart_write(b"AT+CIPOPEN?\r\n")
+        for _ in range(0, sock_num+1):
+            self._read_line()
+            self._parse_reply(b"+CIPOPEN:", idx=2)
+        ip_addr = self._buf
+
+        for _ in range(sock_num, FONA_MAX_SOCKETS):
+            self._read_line()  # eat the rest of '+CIPOPEN' responses
+        return ip_addr
