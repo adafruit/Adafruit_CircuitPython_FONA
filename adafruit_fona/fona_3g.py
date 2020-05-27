@@ -230,14 +230,9 @@ class FONA3G(FONA):
             sock_num < FONA_MAX_SOCKETS
         ), "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
-
-        # TODO: This should be simplified and expect the correct responses from UART
-        self._uart_write(b"AT+CIPHEAD=0\r\n") # disable incoming data notification
-        self._read_line()
-        self._uart_write(b"AT+CIPSRIP=0\r\n") # disable IP rcv. headers
-        self._read_line()
-        self._uart_write(b"AT+CIPRXGET=1\r\n") # receive data manually
-        self._read_line()
+        self._send_check_reply(b"AT+CIPHEAD=0", reply=REPLY_OK) # do not show ip header
+        self._send_check_reply(b"AT+CIPSRIP=0", reply=REPLY_OK) # do not show remote ip/port
+        self._send_check_reply(b"AT+CIPRXGET=1", reply=REPLY_OK) # manually get data
 
         self._uart_write(b"AT+CIPOPEN=" + str(sock_num).encode())
         if conn_mode == 0:
