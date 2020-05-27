@@ -312,9 +312,8 @@ class FONA3G(FONA):
             sock_num < FONA_MAX_SOCKETS
         ), "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
-
-        self._uart_write(b"AT+CIPRXGET=4,0\r\n")
-        
-        if not self._send_parse_reply(b"AT+CIPRXGET=4,0\r\n", b"+CIPRXGET: ", idx=2):
+        if not self._send_parse_reply(b"AT+CIPRXGET=4," + str(sock_num).encode(),
+                                      b"+CIPRXGET: ", idx=2):
             return False
+        print("data: ", self._buf)
         return self._buf

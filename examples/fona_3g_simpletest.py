@@ -9,8 +9,7 @@ import adafruit_requests as requests
 
 print("FONA 3G Webclient")
 
-TEXT_URL = "http://wifitest.adafruit.com/testwifi/index.html"
-JSON_URL = "http://api.coindesk.com/v1/bpi/currentprice/USD.json"
+SERVER_ADDRESS = ("104.236.193.178", 80)
 
 # Get GPRS details and more from a secrets.py file
 try:
@@ -21,7 +20,7 @@ except ImportError:
 
 # Create a serial connection for the FONA connection
 uart = busio.UART(board.TX, board.RX, baudrate=4800)
-rst = digitalio.DigitalInOut(board.D7)
+rst = digitalio.DigitalInOut(board.D9)
 
 # Initialize FONA module (this may take a few seconds)
 fona = FONA.FONA3G(uart, rst, debug=True)
@@ -40,16 +39,27 @@ while not cdma.is_connected:
     time.sleep(0.5)
 print("Network Connected!")
 
-print("My IP address is:", fona.local_ip)
-print("IP lookup adafruit.com: %s" % fona.get_host_by_name("adafruit.com"))
+print("Local IP: ", fona.local_ip)
 
-# Initialize a requests object with a socket and cellular interface
-requests.set_socket(cellular_socket, fona)
+# Set socket interface
+cellular_socket.set_interface(fona)
 
-# fona._debug = True
-print("Fetching text from", TEXT_URL)
-r = requests.get(TEXT_URL)
-print("-" * 40)
-print(r.text)
-print("-" * 40)
-r.close()
+sock = cellular_socket.socket()
+
+print("Connecting to: ", SERVER_ADDRESS[0])
+sock.connect(SERVER_ADDRESS)
+
+print("Connected to:", sock.getpeername())
+
+# Make a HTTP Request
+sock.send(b"GET /testwifi/index.html HTTP/1.1\n")
+sock.send(b"Host: 104.236.193.178")
+sock.send(b"Connection: close\n\n")
+
+bytes_avail = 0
+while not bytes_avail:
+    bytes_avail = sock.available()
+    print(bytes_avail)
+    if bytes_avail > 0:
+        print("bytes_avail: ", bytes_avail)
+    time.sleep(1)
