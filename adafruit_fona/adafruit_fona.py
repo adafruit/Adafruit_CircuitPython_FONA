@@ -346,8 +346,7 @@ class FONA:
         if 2 <= reply_num <= 30:
             rssi = map_range(reply_num, 2, 30, -110, -54)
 
-        # read out the 'ok'
-        self._read_line()
+        self._read_line()  # eat the 'ok'
         return rssi
 
     @property
@@ -399,16 +398,14 @@ class FONA:
 
         if gps_on and not state:
             self._read_line()
-            if self._fona_type == FONA_808_V2:
-                # try GNS
+            if self._fona_type == FONA_808_V2:  # try GNS
                 if not self._send_check_reply(b"AT+CGNSPWR=1", reply=REPLY_OK):
                     return False
             else:
                 if not self._send_parse_reply(b"AT+CGPSPWR=1", reply_data=REPLY_OK):
                     return False
         else:
-            if self._fona_type == FONA_808_V2:
-                # try GNS
+            if self._fona_type == FONA_808_V2:  # try GNS
                 if not self._send_check_reply(b"AT+CGNSPWR=0", reply=REPLY_OK):
                     return False
                 if not self._send_check_reply(b"AT+CGPSPWR=0", reply=REPLY_OK):
@@ -418,7 +415,6 @@ class FONA:
 
     def pretty_ip(self, ip):  # pylint: disable=no-self-use, invalid-name
         """Converts a bytearray IP address to a dotted-quad string for printing"""
-
         return "%d.%d.%d.%d" % (ip[0], ip[1], ip[2], ip[3])
 
     def unpretty_ip(self, ip):  # pylint: disable=no-self-use, invalid-name
@@ -485,8 +481,7 @@ class FONA:
         self._uart_write(b'AT+CMGS="+' + str(phone_number).encode() + b'"' + b"\r")
         self._read_line()
 
-        # expect >
-        if self._buf[0] != 62:
+        if self._buf[0] != 62:  # expect '>'
             # promoting mark ('>') not found
             return False
         self._read_line()
@@ -495,16 +490,14 @@ class FONA:
         self._uart_write((message + chr(26)).encode())
 
         if self._fona_type == FONA_3G_A or self._fona_type == FONA_3G_E:
-            # eat 2x CRLF
-            self._read_line(200)
-            self._read_line(200)
+            self._read_line(200)  # eat first 'CRLF'
+            self._read_line(200)  # eat second 'CRLF'
+
         # read +CMGS, wait ~10sec.
         self._read_line(10000)
-
         if not "+CMGS" in self._buf:
             return False
 
-        # read OK
         if not self._expect_reply(REPLY_OK):
             return False
         return True
@@ -552,7 +545,6 @@ class FONA:
 
     def delete_all_sms(self):
         """Deletes all SMS messages on the FONA SIM."""
-
         self._read_line()
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
             return False
@@ -797,19 +789,14 @@ class FONA:
         if self._debug:
             print("* socket read")
 
-        self._uart_write(b"AT+CIPRXGET=2,")
-        self._uart_write(str(sock_num).encode())
-        self._uart_write(b",")
+        self._uart_write(b"AT+CIPRXGET=2," + str(sock_num).encode() + b",")
         self._uart_write(str(length).encode() + b"\r\n")
-
         self._read_line()
 
         if not self._parse_reply(b"+CIPRXGET:"):
             return False
 
-        self._buf = self._uart.read(length)
-
-        return self._buf
+        return self._uart.read(length)
 
     def socket_write(self, sock_num, buffer, timeout=3000):
         """Writes bytes to the socket.
