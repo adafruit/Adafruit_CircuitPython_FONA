@@ -301,19 +301,3 @@ class FONA3G(FONA):
         if "Send ok" not in self._buf.decode():
             return False
         return True
-
-    def socket_available(self, sock_num):
-        """Returns the amount of bytes to be read from the socket.
-        :param int sock_num: Desired socket to return bytes available from.
-
-        """
-        self._read_line()
-        assert (
-            sock_num < FONA_MAX_SOCKETS
-        ), "Provided socket exceeds the maximum number of \
-                                             sockets for the FONA module."
-        if not self._send_parse_reply(b"AT+CIPRXGET=4," + str(sock_num).encode(),
-                                      b"+CIPRXGET: ", idx=2):
-            return False
-        print("data: ", self._buf)
-        return self._buf
