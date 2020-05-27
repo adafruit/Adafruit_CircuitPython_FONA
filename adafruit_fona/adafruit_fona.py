@@ -86,9 +86,8 @@ class FONA:
     # pylint: disable=too-many-arguments
     def __init__(self, uart, rst, ri=None, debug=False):
         self._buf = b""  # shared buffer
-        self.type = 0
-        self._debug = debug
         self._fona_type = 0
+        self._debug = debug
 
         self._uart = uart
         self._rst = rst
@@ -141,21 +140,21 @@ class FONA:
         self._read_line(multiline=True)
 
         if self._buf.find(b"SIM808 R14") != -1:
-            self.type = FONA_808_V2
+            self._fona_type = FONA_808_V2
         elif self._buf.find(b"SIM808 R13") != -1:
-            self.type = FONA_808_V1
+            self._fona_type = FONA_808_V1
         elif self._buf.find(b"SIMCOM_SIM5320A") != -1:
-            self.type = FONA_3G_A
+            self._fona_type = FONA_3G_A
         elif self._buf.find(b"SIMCOM_SIM5320E") != -1:
-            self.type = FONA_3G_E
+            self._fona_type = FONA_3G_E
 
-        if self.type == FONA_800_L:
+        if self._fona_type == FONA_800_L:
             # determine if SIM800H
             self._uart_write(b"AT+GMM\r\n")
             self._read_line(multiline=True)
 
             if self._buf.find(b"SIM800H") != -1:
-                self.type = FONA_800_H
+                self._fona_type = FONA_800_H
         return True
 
     def factory_reset(self):
@@ -759,13 +758,11 @@ class FONA:
 
         if not self._expect_reply(b"CONNECT OK"):
             return False
-
         return True
 
-    def socket_close(self, sock_num, quick_close=1):
+    def socket_close(self, sock_num):
         """Close TCP or UDP connection
         :param int sock_num: Desired socket number.
-        :param int quick_close: Quickly or slowly close the socket. Enabled by default
 
         """
         if self._debug:
@@ -775,11 +772,15 @@ class FONA:
         ), "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
 
-        self._uart_write(b"AT+CIPCLOSE=" + str(sock_num).encode() + b",")
-        self._uart_write(str(quick_close).encode() + b"\r\n")
-        self._read_line()
-        if not self._parse_reply(b"CLOSE OK", idx=0):
-            return False
+        self._uart_write(b"AT+CIPCLOSE=" + str(sock_num).encode() + b"\r\n")
+        self._read_line(3000)
+
+        if self._fona_type == FONA_3G_A or self._fona_type == FONA_3G_E:
+            if not self._expect_reply(REPLY_OK):
+                return False
+        else:
+            if not self._expect_reply(b"CLOSE OK"):
+                return False
         return True
 
     def socket_read(self, sock_num, length):
