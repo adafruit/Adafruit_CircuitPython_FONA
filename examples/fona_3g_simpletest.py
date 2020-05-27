@@ -59,7 +59,12 @@ sock.send(b"Connection: close\n\n")
 bytes_avail = 0
 while not bytes_avail:
     bytes_avail = sock.available()
-    print(bytes_avail)
     if bytes_avail > 0:
         print("bytes_avail: ", bytes_avail)
+        data = sock.recv(bytes_avail)
+        print(data.decode())
+        break
     time.sleep(1)
+
+sock.close()
+print("Socket connected: ", sock.connected)
