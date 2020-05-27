@@ -182,7 +182,7 @@ class FONA:
     # pylint: disable=too-many-return-statements
     def version(self):
         """Returns FONA Version."""
-        return self.type
+        return self._fona_type
 
     @property
     def iemi(self):
@@ -494,7 +494,7 @@ class FONA:
         # write out message and ^z
         self._uart_write((message + chr(26)).encode())
 
-        if self.type == FONA_3G_A or self.type == FONA_3G_E:
+        if self._fona_type == FONA_3G_A or self._fona_type == FONA_3G_E:
             # eat 2x CRLF
             self._read_line(200)
             self._read_line(200)
@@ -557,7 +557,7 @@ class FONA:
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
             return False
 
-        if self.type == FONA_3G_A or self.type == FONA_3G_E:
+        if self._fona_type == FONA_3G_A or self._fona_type == FONA_3G_E:
             num_sms = self.num_sms()
             for slot in range(0, num_sms):
                 if not self.delete_sms(slot):
@@ -834,7 +834,7 @@ class FONA:
             return False
 
         self._uart_write(buffer + b"\r\n")
-        self._read_line(3000)
+        self._read_line(timeout)
 
         if "SEND OK" not in self._buf.decode():
             return False
