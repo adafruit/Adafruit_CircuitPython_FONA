@@ -144,9 +144,9 @@ class FONA3G(FONA):
             ):  # Transparent mode
                 return False
 
-            # TODO: Not sure if this is multi-client, check this out
+            # Open network
             if not self._send_check_reply(
-                b"AT+NETOPEN=,,1", reply=b"Network opened", timeout=10000
+                b"AT+NETOPEN=,,1", reply=b"Network opened", timeout=120000
             ):
                 return False
             self._read_line()
@@ -196,7 +196,7 @@ class FONA3G(FONA):
         self._uart_write(b"AT+CIPOPEN?\r\n")  # Query which sockets are busy
 
         for socket in range(0, FONA_MAX_SOCKETS):
-            self._read_line()
+            self._read_line(120000)
             try:  # SIMCOM5320 lacks a socket connection status, this is a workaround
                 self._parse_reply(b"+CIPOPEN: ", idx=1)
             except IndexError:
@@ -231,10 +231,13 @@ class FONA3G(FONA):
         ), "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
 
-        self._uart_write(b"AT+CIPHEAD=0\r\n") # Display incoming data 
+        self._uart_write(b"AT+CIPHEAD=0\r\n") # disable incoming data notification
         self._read_line()
-        self._uart_write(b"AT+CIPSRIP=0\r\n") # enable IP recv headers
+        self._uart_write(b"AT+CIPSRIP=0\r\n") # disable IP rcv. headers
         self._read_line()
+        self._uart_write(b"AT+CIPRXGET=1\r\n") # receive data manually
+        self._read_line()
+
 
         self._uart_write(b"AT+CIPOPEN=" + str(sock_num).encode())
         if conn_mode == 0:
@@ -304,14 +307,14 @@ class FONA3G(FONA):
         :param int sock_num: Desired socket to return bytes available from.
 
         """
+        self._read_line()
         assert (
             sock_num < FONA_MAX_SOCKETS
         ), "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
-        print("Reading...")
-        self._read_line() # RCV  FROM?
-        if not self._expect_reply(b"RECV FROM:"):
+
+        self._uart_write(b"AT+CIPRXGET=4,0\r\n")
+        
+        if not self._send_parse_reply(b"AT+CIPRXGET=4,0\r\n", b"+CIPRXGET: ", idx=2):
             return False
-        if not self._parse_reply(b"+IPD"):
-            return False
-        return 0
+        return self._buf
