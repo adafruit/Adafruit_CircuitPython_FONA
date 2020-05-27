@@ -163,11 +163,10 @@ class FONA3G(FONA):
 
     ### Socket API (TCP, UDP) ###
 
-    @property
-    def sock_timeout(self):
-        """Returns the timeout value for sending data."""
+    def sock_send_timeout(self):
+        """Returns the timeout value for sending data in milliseconds."""
         self._read_line()
-        if not self._send_parse_reply(b"AT+CIPTIMEOUT?", b"+CIPTIMEOUT: ", idx=2):
+        if not self._send_parse_reply(b"AT+CIPTIMEOUT?", b"+CIPTIMEOUT:", idx=2):
             return False
         return self._buf
 
@@ -266,10 +265,11 @@ class FONA3G(FONA):
             self._read_line()  # eat the rest of '+CIPOPEN' responses
         return ip_addr
 
-    def socket_write(self, sock_num, buffer):
+    def socket_write(self, sock_num, buffer, timeout=120000):
         """Writes bytes to the socket.
         :param int sock_num: Desired socket number to write to.
         :param bytes buffer: Bytes to write to socket.
+        :param int timeout: Socket write timeout, in milliseconds. Defaults to 120000ms.
 
         """
         assert (
@@ -288,14 +288,13 @@ class FONA3G(FONA):
         self._uart_write(buffer + b"\r\n")
         self._read_line() # eat 'OK'
 
-        self._read_line() # expect +CIPSEND
+        self._read_line(3000) # expect +CIPSEND: rx,tx
         if not self._parse_reply(b"+CIPSEND:", idx=1):
             return False
-        
-        if not self._buf == len(buffer):
+        if not self._buf == len(buffer): # assert data sent == buffer size
             return False
 
-        self._read_line(10000) # TODO: Implement cipsend_timeout instead
+        self._read_line(timeout)
         if "Send ok" not in self._buf.decode():
             return False
         return True

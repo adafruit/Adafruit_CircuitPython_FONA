@@ -810,10 +810,11 @@ class FONA:
 
         return self._buf
 
-    def socket_write(self, sock_num, buffer):
+    def socket_write(self, sock_num, buffer, timeout=3000):
         """Writes bytes to the socket.
         :param int sock_num: Desired socket number to write to.
         :param bytes buffer: Bytes to write to socket.
+        :param int timeout: Socket write timeout, in milliseconds.
 
         """
         self._read_line()
