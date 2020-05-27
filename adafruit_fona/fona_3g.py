@@ -131,12 +131,10 @@ class FONA3G(FONA):
                 ):
                     return False
 
-                
-
-                # TODO: Only implement if user/pass are provided
-                self._uart_write(b"AT+CGAUTH=1,1,")
-                self._uart_write(b'"' + apn_pass.encode() + b'"')
-                self._uart_write(b',"' + apn_user.encode() + b'"\r\n')
+                if apn_user is not None:
+                    self._uart_write(b"AT+CGAUTH=1,1,")
+                    self._uart_write(b'"' + apn_pass.encode() + b'"')
+                    self._uart_write(b',"' + apn_user.encode() + b'"\r\n')
 
             if not self._get_reply(REPLY_OK, timeout=10000):
                 return False
