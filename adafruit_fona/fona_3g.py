@@ -163,6 +163,14 @@ class FONA3G(FONA):
 
     ### Socket API (TCP, UDP) ###
 
+    @property
+    def sock_timeout(self):
+        """Returns the timeout value for sending data."""
+        self._read_line()
+        if not self._send_parse_reply(b"AT+CIPTIMEOUT?", b"+CIPTIMEOUT: ", idx=2):
+            return False
+        return self._buf
+
     def get_host_by_name(self, hostname):
         """Converts a hostname to a 4-byte IP address.
         :param str hostname: Domain name.
@@ -224,6 +232,11 @@ class FONA3G(FONA):
         ), "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
 
+        self._uart_write(b"AT+CIPHEAD=0\r\n") # Display incoming data 
+        self._read_line()
+        self._uart_write(b"AT+CIPSRIP=0\r\n") # enable IP recv headers
+        self._read_line()
+
         self._uart_write(b"AT+CIPOPEN=" + str(sock_num).encode())
         if conn_mode == 0:
             self._uart_write(b',"TCP","')
@@ -274,9 +287,32 @@ class FONA3G(FONA):
 
         self._uart_write(buffer + b"\r\n")
         self._read_line() # eat 'OK'
-        self._read_line(10000) # wait for 'Send OK'
 
-        if "Send ok" not in self._buf.decode():
+        self._read_line() # expect +CIPSEND
+        if not self._parse_reply(b"+CIPSEND:", idx=1):
+            return False
+        
+        if not self._buf == len(buffer):
             return False
 
+        self._read_line(10000) # TODO: Implement cipsend_timeout instead
+        if "Send ok" not in self._buf.decode():
+            return False
         return True
+
+    def socket_available(self, sock_num):
+        """Returns the amount of bytes to be read from the socket.
+        :param int sock_num: Desired socket to return bytes available from.
+
+        """
+        assert (
+            sock_num < FONA_MAX_SOCKETS
+        ), "Provided socket exceeds the maximum number of \
+                                             sockets for the FONA module."
+        print("Reading...")
+        self._read_line() # RCV  FROM?
+        if not self._expect_reply(b"RECV FROM:"):
+            return False
+        if not self._parse_reply(b"+IPD"):
+            return False
+        return 0
