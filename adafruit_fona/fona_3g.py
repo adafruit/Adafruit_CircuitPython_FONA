@@ -62,7 +62,7 @@ class FONA3G(FONA):
 
     def set_baudrate(self, baudrate):
         """Sets the FONA's UART baudrate."""
-        if not super()._send_check_reply(
+        if not self._send_check_reply(
             b"AT+IPREX=" + str(baudrate).encode(), reply=REPLY_OK
         ):
             return False
@@ -71,7 +71,7 @@ class FONA3G(FONA):
     @property
     def gps(self):
         """Returns True if the GPS session is active, False if it's stopped.."""
-        if not super()._send_check_reply(b"AT+CGPS?", reply=b"+CGPS: 1,1"):
+        if not self._send_check_reply(b"AT+CGPS?", reply=b"+CGPS: 1,1"):
             return False
         return True
 
@@ -82,25 +82,25 @@ class FONA3G(FONA):
 
         """
         # check if GPS is already enabled
-        if not super()._send_parse_reply(b"AT+CGPS?", b"+CGPS: "):
+        if not self._send_parse_reply(b"AT+CGPS?", b"+CGPS: "):
             return False
 
         state = self._buf
 
         if gps_on and not state:
-            super()._read_line()
-            if not super()._send_check_reply(b"AT+CGPS=1", reply=REPLY_OK):
+            self._read_line()
+            if not self._send_check_reply(b"AT+CGPS=1", reply=REPLY_OK):
                 return False
         else:
-            if not super()._send_check_reply(b"AT+CGPS=0", reply=REPLY_OK):
+            if not self._send_check_reply(b"AT+CGPS=0", reply=REPLY_OK):
                 return False
-            super()._read_line(2000)  # eat '+CGPS: 0'
+            self._read_line(2000)  # eat '+CGPS: 0'
         return True
 
     @property
     def ue_system_info(self):
         """Returns True if UE system is online, otherwise False."""
-        super()._send_parse_reply(b"AT+CPSI?\r\n", b"+CPSI: ")
+        self._send_parse_reply(b"AT+CPSI?\r\n", b"+CPSI: ")
         if not self._buf == "GSM" or self._buf == "WCDMA":  # 5.15
             return False
         return True
@@ -108,7 +108,7 @@ class FONA3G(FONA):
     @property
     def local_ip(self):
         """Returns the IP address of the current active socket."""
-        if not super()._send_parse_reply(b"AT+IPADDR", b"+IPADDR:"):
+        if not self._send_parse_reply(b"AT+IPADDR", b"+IPADDR:"):
             return False
         return self._buf
 
@@ -119,23 +119,26 @@ class FONA3G(FONA):
 
         """
         if enable:
-            if not super()._send_check_reply(
+            if not self._send_check_reply(
                 b"AT+CGATT=1", reply=REPLY_OK, timeout=10000
             ):
                 return False
 
             if apn is not None:  # Configure APN
                 apn_name, apn_user, apn_pass = apn
-                if not super()._send_check_reply_quoted(
+                if not self._send_check_reply_quoted(
                     b'AT+CGSOCKCONT=1,"IP",', apn_name.encode(), REPLY_OK, 10000
                 ):
                     return False
-                # TODO: Only implement if user/pass are provided
-                super()._uart_write(b"AT+CGAUTH=1,1,")
-                super()._uart_write(b'"' + apn_pass.encode() + b'"')
-                super()._uart_write(b',"' + apn_user.encode() + b'"\r\n')
 
-            if not super()._get_reply(REPLY_OK, timeout=10000):
+                
+
+                # TODO: Only implement if user/pass are provided
+                self._uart_write(b"AT+CGAUTH=1,1,")
+                self._uart_write(b'"' + apn_pass.encode() + b'"')
+                self._uart_write(b',"' + apn_user.encode() + b'"\r\n')
+
+            if not self._get_reply(REPLY_OK, timeout=10000):
                 return False
 
             # Enable PDP Context
@@ -179,7 +182,7 @@ class FONA3G(FONA):
         if isinstance(hostname, str):
             hostname = bytes(hostname, "utf-8")
 
-        super()._uart_write(b'AT+CDNSGIP="' + hostname + b'"\r\n')
+        self._uart_write(b'AT+CDNSGIP="' + hostname + b'"\r\n')
         self._read_line()
         self._read_line(10000)  # Read the +CDNSGIP, takes a while
 
