@@ -57,9 +57,6 @@ class FONA3G(FONA):
 
     """
 
-    def __init__(self, uart, rst, ri=None, debug=False):
-        super(FONA3G, self).__init__(uart, rst, ri, debug)
-
     def set_baudrate(self, baudrate):
         """Sets the FONA's UART baudrate."""
         if not self._send_check_reply(
@@ -119,9 +116,7 @@ class FONA3G(FONA):
 
         """
         if enable:
-            if not self._send_check_reply(
-                b"AT+CGATT=1", reply=REPLY_OK, timeout=10000
-            ):
+            if not self._send_check_reply(b"AT+CGATT=1", reply=REPLY_OK, timeout=10000):
                 return False
 
             if apn is not None:  # Configure APN
@@ -231,9 +226,11 @@ class FONA3G(FONA):
             sock_num < FONA_MAX_SOCKETS
         ), "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
-        self._send_check_reply(b"AT+CIPHEAD=0", reply=REPLY_OK) # do not show ip header
-        self._send_check_reply(b"AT+CIPSRIP=0", reply=REPLY_OK) # do not show remote ip/port
-        self._send_check_reply(b"AT+CIPRXGET=1", reply=REPLY_OK) # manually get data
+        self._send_check_reply(b"AT+CIPHEAD=0", reply=REPLY_OK)  # do not show ip header
+        self._send_check_reply(
+            b"AT+CIPSRIP=0", reply=REPLY_OK
+        )  # do not show remote ip/port
+        self._send_check_reply(b"AT+CIPRXGET=1", reply=REPLY_OK)  # manually get data
 
         self._uart_write(b"AT+CIPOPEN=" + str(sock_num).encode())
         if conn_mode == 0:
@@ -245,7 +242,7 @@ class FONA3G(FONA):
         if not self._expect_reply(b"Connect ok"):
             return False
         return True
-    
+
     def remote_ip(self, sock_num):
         """Returns the IP address of sender."""
         self._read_line()
@@ -255,7 +252,7 @@ class FONA3G(FONA):
                                              sockets for the FONA module."
 
         self._uart_write(b"AT+CIPOPEN?\r\n")
-        for _ in range(0, sock_num+1):
+        for _ in range(0, sock_num + 1):
             self._read_line()
             self._parse_reply(b"+CIPOPEN:", idx=2)
         ip_addr = self._buf
@@ -277,7 +274,13 @@ class FONA3G(FONA):
                                              sockets for the FONA module."
 
         self._uart.reset_input_buffer()
-        self._uart_write(b"AT+CIPSEND=" + str(sock_num).encode() + b"," + str(len(buffer)).encode() + b"\r\n")
+        self._uart_write(
+            b"AT+CIPSEND="
+            + str(sock_num).encode()
+            + b","
+            + str(len(buffer)).encode()
+            + b"\r\n"
+        )
         self._read_line()
 
         if self._buf[0] != 62:
@@ -285,12 +288,12 @@ class FONA3G(FONA):
             return False
 
         self._uart_write(buffer + b"\r\n")
-        self._read_line() # eat 'OK'
+        self._read_line()  # eat 'OK'
 
-        self._read_line(3000) # expect +CIPSEND: rx,tx
+        self._read_line(3000)  # expect +CIPSEND: rx,tx
         if not self._parse_reply(b"+CIPSEND:", idx=1):
             return False
-        if not self._buf == len(buffer): # assert data sent == buffer size
+        if not self._buf == len(buffer):  # assert data sent == buffer size
             return False
 
         self._read_line(timeout)
