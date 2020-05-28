@@ -161,11 +161,12 @@ class FONA3G(FONA):
 
     @property
     def tx_timeout(self):
+        """Returns CIPSEND timeout, in milliseconds."""
         self._read_line()
         if not self._send_parse_reply(b"AT+CIPTIMEOUT?", b"+CIPTIMEOUT:", idx=2):
             return False
         return True
-    
+
     @tx_timeout.setter
     def tx_timeout(self, timeout):
         """Sets CIPSEND timeout."""
