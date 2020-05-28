@@ -41,12 +41,10 @@ Implementation Notes
 from micropython import const
 from .adafruit_fona import FONA, REPLY_OK
 
-
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_FONA.git"
 
 FONA_MAX_SOCKETS = const(10)
-
 
 class FONA3G(FONA):
     """FONA 3G module interface.
@@ -116,7 +114,9 @@ class FONA3G(FONA):
 
         """
         if enable:
-            if not self._send_check_reply(b"AT+CGATT=1", reply=REPLY_OK, timeout=10000):
+            if not self._send_check_reply(
+                b"AT+CGATT=1", reply=REPLY_OK, timeout=10000
+            ):
                 return False
 
             if apn is not None:  # Configure APN
@@ -159,12 +159,20 @@ class FONA3G(FONA):
 
     ### Socket API (TCP, UDP) ###
 
-    def sock_send_timeout(self):
-        """Returns the timeout value for sending data in milliseconds."""
+    @property
+    def tx_timeout(self):
         self._read_line()
         if not self._send_parse_reply(b"AT+CIPTIMEOUT?", b"+CIPTIMEOUT:", idx=2):
             return False
-        return self._buf
+        return True
+    
+    @tx_timeout.setter
+    def tx_timeout(self, timeout):
+        """Sets CIPSEND timeout."""
+        self._read_line()
+        if not self._send_check_reply(b"AT+CIPTIMEOUT=" + str(timeout).encode(), reply=REPLY_OK):
+            return False
+        return True
 
     def get_host_by_name(self, hostname):
         """Converts a hostname to a 4-byte IP address.
@@ -226,11 +234,9 @@ class FONA3G(FONA):
             sock_num < FONA_MAX_SOCKETS
         ), "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
-        self._send_check_reply(b"AT+CIPHEAD=0", reply=REPLY_OK)  # do not show ip header
-        self._send_check_reply(
-            b"AT+CIPSRIP=0", reply=REPLY_OK
-        )  # do not show remote ip/port
-        self._send_check_reply(b"AT+CIPRXGET=1", reply=REPLY_OK)  # manually get data
+        self._send_check_reply(b"AT+CIPHEAD=0", reply=REPLY_OK) # do not show ip header
+        self._send_check_reply(b"AT+CIPSRIP=0", reply=REPLY_OK) # do not show remote ip/port
+        self._send_check_reply(b"AT+CIPRXGET=1", reply=REPLY_OK) # manually get data
 
         self._uart_write(b"AT+CIPOPEN=" + str(sock_num).encode())
         if conn_mode == 0:
@@ -252,7 +258,7 @@ class FONA3G(FONA):
                                              sockets for the FONA module."
 
         self._uart_write(b"AT+CIPOPEN?\r\n")
-        for _ in range(0, sock_num + 1):
+        for _ in range(0, sock_num+1):
             self._read_line()
             self._parse_reply(b"+CIPOPEN:", idx=2)
         ip_addr = self._buf
@@ -268,32 +274,28 @@ class FONA3G(FONA):
         :param int timeout: Socket write timeout, in milliseconds. Defaults to 120000ms.
 
         """
+        self._read_line()
         assert (
             sock_num < FONA_MAX_SOCKETS
         ), "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
 
         self._uart.reset_input_buffer()
-        self._uart_write(
-            b"AT+CIPSEND="
-            + str(sock_num).encode()
-            + b","
-            + str(len(buffer)).encode()
-            + b"\r\n"
-        )
-        self._read_line()
 
+        self._uart_write(b"AT+CIPSEND=" + str(sock_num).encode() + b"," +
+                         str(len(buffer)).encode() + b"\r\n")
+        self._read_line()
         if self._buf[0] != 62:
             # promoting mark ('>') not found
             return False
 
         self._uart_write(buffer + b"\r\n")
-        self._read_line()  # eat 'OK'
+        self._read_line() # eat 'OK'
 
-        self._read_line(3000)  # expect +CIPSEND: rx,tx
+        self._read_line(3000) # expect +CIPSEND: rx,tx
         if not self._parse_reply(b"+CIPSEND:", idx=1):
             return False
-        if not self._buf == len(buffer):  # assert data sent == buffer size
+        if not self._buf == len(buffer): # assert data sent == buffer size
             return False
 
         self._read_line(timeout)
