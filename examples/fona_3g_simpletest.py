@@ -7,9 +7,10 @@ from adafruit_fona.adafruit_fona_cdma import CDMA
 import adafruit_fona.adafruit_fona_socket as cellular_socket
 import adafruit_requests as requests
 
-print("FONA 3G Webclient")
+print("FONA 3G Webclient Test")
 
-SERVER_ADDRESS = ("104.236.193.178", 80)
+TEXT_URL = "http://wifitest.adafruit.com/testwifi/index.html"
+JSON_URL = "http://api.coindesk.com/v1/bpi/currentprice/USD.json"
 
 # Get GPRS details and more from a secrets.py file
 try:
@@ -23,7 +24,7 @@ uart = busio.UART(board.TX, board.RX, baudrate=4800)
 rst = digitalio.DigitalInOut(board.D9)
 
 # Initialize FONA module (this may take a few seconds)
-fona = FONA.FONA3G(uart, rst, debug=True)
+fona = FONA.FONA3G(uart, rst)
 
 # Initialize CDMA
 cdma = CDMA(fona, (secrets["apn"], secrets["apn_username"], secrets["apn_password"]))
@@ -39,32 +40,26 @@ while not cdma.is_connected:
     time.sleep(0.5)
 print("Network Connected!")
 
-print("Local IP: ", fona.local_ip)
+print("My IP address is:", fona.local_ip)
+print("IP lookup adafruit.com: %s" % fona.get_host_by_name("adafruit.com"))
 
-# Set socket interface
-cellular_socket.set_interface(fona)
+# Initialize a requests object with a socket and cellular interface
+requests.set_socket(cellular_socket, fona)
 
-sock = cellular_socket.socket()
+# fona._debug = True
+print("Fetching text from", TEXT_URL)
+r = requests.get(TEXT_URL, headers={"Connection": "keep-alive"})
+print("-" * 40)
+print(r.text)
+print("-" * 40)
+r.close()
 
-print("Connecting to: ", SERVER_ADDRESS[0])
-sock.connect(SERVER_ADDRESS)
+print()
+print("Fetching json from", JSON_URL)
+r = requests.get(JSON_URL, headers={"Connection": "keep-alive"})
+print("-" * 40)
+print(r.json())
+print("-" * 40)
+r.close()
 
-print("Connected to:", sock.getpeername())
-
-# Make a HTTP Request
-sock.send(b"GET /testwifi/index.html HTTP/1.1\n")
-sock.send(b"Host: 104.236.193.178")
-sock.send(b"Connection: close\n\n")
-
-bytes_avail = 0
-while not bytes_avail:
-    bytes_avail = sock.available()
-    if bytes_avail > 0:
-        print("bytes_avail: ", bytes_avail)
-        data = sock.recv(bytes_avail)
-        print(data.decode())
-        break
-    time.sleep(1)
-
-sock.close()
-print("Socket connected: ", sock.connected)
+print("Done!")
