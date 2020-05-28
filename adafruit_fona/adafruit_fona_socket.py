@@ -103,10 +103,10 @@ class socket:
             raise RuntimeError("Only AF_INET family supported by cellular sockets.")
         self._sock_type = type
         self._buffer = b""
-        if hasattr(_the_interface, 'tx_timeout'):
+        if hasattr(_the_interface, "tx_timeout"):
             self._timeout = _the_interface.tx_timeout
         else:
-            self._timeout = 3000 # FONA800
+            self._timeout = 3000  # FONA800
 
         self._socknum = _the_interface.get_socket()
         SOCKETS.append(self._socknum)

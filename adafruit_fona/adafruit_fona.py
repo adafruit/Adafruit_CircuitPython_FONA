@@ -782,6 +782,7 @@ class FONA:
         :param int length: Desired length to read.
 
         """
+        self._read_line()
         assert (
             sock_num < FONA_MAX_SOCKETS
         ), "Provided socket exceeds the maximum number of \
