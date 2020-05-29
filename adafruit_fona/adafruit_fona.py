@@ -91,7 +91,6 @@ class FONA:
 
         self._uart = uart
         self._rst = rst
-        self._rst.switch_to_output()
         self._ri = ri
         if self._ri is not None:
             self._ri.switch_to_input()
@@ -106,14 +105,17 @@ class FONA:
         timeout = 7000
         while timeout > 0:
             while self._uart.in_waiting:
-                if self._send_check_reply(CMD_AT, reply=REPLY_OK):
-                    break
+                self._read_line()
+            if self._send_check_reply(CMD_AT, reply=REPLY_OK):
+                break
+            while self._uart.in_waiting:
+                self._read_line()
             if self._send_check_reply(CMD_AT, reply=REPLY_AT):
                 break
             time.sleep(0.5)
             timeout -= 500
 
-        if timeout <= 0:
+        if timeout <= 0: # no response to AT, last ditch attempt
             self._send_check_reply(CMD_AT, reply=REPLY_OK)
             time.sleep(0.1)
             self._send_check_reply(CMD_AT, reply=REPLY_OK)
@@ -166,12 +168,10 @@ class FONA:
         return True
 
     def reset(self):
-        """Performs a hardware reset on the modem.
-        NOTE: This may take a few seconds to complete.
-
-        """
+        """Performs a hardware reset on the modem."""
         if self._debug:
             print("* Reset FONA")
+        self._rst.switch_to_output()
         self._rst.value = True
         time.sleep(0.01)
         self._rst.value = False
