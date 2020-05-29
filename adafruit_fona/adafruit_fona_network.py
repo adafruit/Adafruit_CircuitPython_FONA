@@ -33,8 +33,7 @@ Interface for connecting to and interacting with GSM and CDMA cellular networks.
 NET_GSM = 0x01
 NET_CDMA = 0x02
 
-
-class NETWORK:
+class CELLULAR:
     """Interface for connecting to and interacting with GSM and CDMA cellular networks."""
 
     def __init__(self, fona, apn):
@@ -75,7 +74,7 @@ class NETWORK:
         if self._network_type == NET_GSM:
             if self._iface.gps == 3 and self._iface.network_status == 1:
                 return True
-        else:  # Attach CDMA network
+        else: # Attach CDMA network
             if self._iface.ue_system_info == 1 and self._iface.network_status == 1:
                 return True
         return False
