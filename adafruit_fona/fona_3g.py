@@ -180,13 +180,13 @@ class FONA3G(FONA):
         """Converts a hostname to a 4-byte IP address.
         :param str hostname: Domain name.
         """
+        self._read_line()
         if self._debug:
             print("*** Get host by name")
         if isinstance(hostname, str):
             hostname = bytes(hostname, "utf-8")
 
         self._uart_write(b'AT+CDNSGIP="' + hostname + b'"\r\n')
-        self._read_line()
         self._read_line(10000)  # Read the +CDNSGIP, takes a while
 
         if not self._parse_reply(b"+CDNSGIP: ", idx=2):
