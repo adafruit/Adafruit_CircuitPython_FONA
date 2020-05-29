@@ -3,7 +3,7 @@ import board
 import busio
 import digitalio
 import adafruit_fona.fona_3g as FONA
-from adafruit_fona.adafruit_fona_cdma import CDMA
+from adafruit_fona.adafruit_fona_network import NETWORK
 import adafruit_fona.adafruit_fona_socket as cellular_socket
 import adafruit_requests as requests
 
@@ -26,17 +26,17 @@ rst = digitalio.DigitalInOut(board.D9)
 # Initialize FONA module (this may take a few seconds)
 fona = FONA.FONA3G(uart, rst)
 
-# Initialize CDMA
-cdma = CDMA(fona, (secrets["apn"], secrets["apn_username"], secrets["apn_password"]))
+# Initialize cellular data network
+network = NETWORK(fona, (secrets["apn"], secrets["apn_username"], secrets["apn_password"]))
 
-while not cdma.is_attached:
+while not network.is_attached:
     print("Attaching to network...")
     time.sleep(0.5)
 print("Attached!")
 
-while not cdma.is_connected:
+while not network.is_connected:
     print("Connecting to network...")
-    cdma.connect()
+    network.connect()
     time.sleep(0.5)
 print("Network Connected!")
 
@@ -53,6 +53,7 @@ print("-" * 40)
 print(r.text)
 print("-" * 40)
 r.close()
+
 
 print()
 print("Fetching json from", JSON_URL)
