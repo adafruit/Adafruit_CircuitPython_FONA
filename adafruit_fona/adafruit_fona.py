@@ -78,10 +78,8 @@ class FONA:
     :param bool debug: Enable debugging output.
 
     """
-
-    # Connection modes
-    TCP_MODE = const(0)
-    UDP_MODE = const(1)
+    TCP_MODE = const(0) # TCP socket
+    UDP_MODE = const(1) # UDP socket
 
     # pylint: disable=too-many-arguments
     def __init__(self, uart, rst, ri=None, debug=False):
@@ -104,12 +102,8 @@ class FONA:
 
         timeout = 7000
         while timeout > 0:
-            while self._uart.in_waiting:
-                self._read_line()
             if self._send_check_reply(CMD_AT, reply=REPLY_OK):
                 break
-            while self._uart.in_waiting:
-                self._read_line()
             if self._send_check_reply(CMD_AT, reply=REPLY_AT):
                 break
             time.sleep(0.5)
