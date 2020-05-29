@@ -121,9 +121,9 @@ class FONA:
         self._send_check_reply(b"ATE0", reply=REPLY_OK)
         time.sleep(0.1)
 
+        self._read_line()
         if not self._send_check_reply(b"ATE0", reply=REPLY_OK):
             return False
-        time.sleep(0.1)
 
         # turn on hangupitude
         self._send_check_reply(b"AT+CVHU=0", reply=REPLY_OK)
