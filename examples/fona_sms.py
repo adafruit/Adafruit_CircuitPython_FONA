@@ -3,7 +3,6 @@ import time
 import board
 import busio
 import digitalio
-import adafruit_fona.adafruit_fona
 from adafruit_fona.adafruit_fona import FONA, FONA_3G_A, FONA_3G_E
 from adafruit_fona.fona_3g import FONA3G
 

@@ -1,8 +1,10 @@
+# pylint: disable=unused-import
 import time
 import board
 import busio
 import digitalio
 from adafruit_fona.adafruit_fona import FONA
+from adafruit_fona.fona_3g import FONA3G
 
 print("FONA SMS Response")
 
@@ -10,8 +12,11 @@ print("FONA SMS Response")
 uart = busio.UART(board.TX, board.RX)
 rst = digitalio.DigitalInOut(board.D4)
 
-# Initialize FONA module (this may take a few seconds)
+# Use this for FONA800 and FONA808
 fona = FONA(uart, rst)
+
+# Use this for FONA3G
+# fona = FONA3G(uart, rst)
 
 # Initialize Network
 while fona.network_status != 1:

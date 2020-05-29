@@ -65,8 +65,8 @@ FONA_3G_A = const(0x4)
 FONA_3G_E = const(0x5)
 
 # FONA preferred SMS storage
-FONA_SMS_STORAGE_SIM = b'"SM"' # Storage on the SIM
-FONA_SMS_STORAGE_INTERNAL = b'"ME"' # Internal storage on the FONA
+FONA_SMS_STORAGE_SIM = b'"SM"'  # Storage on the SIM
+FONA_SMS_STORAGE_INTERNAL = b'"ME"'  # Internal storage on the FONA
 # pylint: enable=bad-whitespace
 
 
@@ -79,8 +79,9 @@ class FONA:
     :param bool debug: Enable debugging output.
 
     """
-    TCP_MODE = const(0) # TCP socket
-    UDP_MODE = const(1) # UDP socket
+
+    TCP_MODE = const(0)  # TCP socket
+    UDP_MODE = const(1)  # UDP socket
 
     # pylint: disable=too-many-arguments
     def __init__(self, uart, rst, ri=None, debug=False):
@@ -110,7 +111,7 @@ class FONA:
             time.sleep(0.5)
             timeout -= 500
 
-        if timeout <= 0: # no response to AT, last ditch attempt
+        if timeout <= 0:  # no response to AT, last ditch attempt
             self._send_check_reply(CMD_AT, reply=REPLY_OK)
             time.sleep(0.1)
             self._send_check_reply(CMD_AT, reply=REPLY_OK)
