@@ -1,8 +1,11 @@
+# pylint: disable=unused-import
 import time
 import board
 import busio
 import digitalio
-from adafruit_fona.adafruit_fona import FONA
+import adafruit_fona.adafruit_fona
+from adafruit_fona.adafruit_fona import FONA, FONA_3G_A, FONA_3G_E
+from adafruit_fona.fona_3g import FONA3G
 
 print("FONA SMS")
 
@@ -10,10 +13,13 @@ print("FONA SMS")
 uart = busio.UART(board.TX, board.RX)
 rst = digitalio.DigitalInOut(board.D4)
 
-# Initialize FONA module (this may take a few seconds)
+# Use this for FONA800 and FONA808
 fona = FONA(uart, rst)
 
-# Initialize Network
+# Use this for FONA3G
+# fona = FONA3G(uart, rst)
+
+# Initialize network
 while fona.network_status != 1:
     print("Connecting to network...")
     time.sleep(1)
@@ -30,9 +36,12 @@ print("SMS Sent!")
 num_sms = fona.num_sms()
 print("%d SMS's on SIM Card" % num_sms)
 
-if fona._fona_type == 4 or fona.type == 5:  # FONA 3G
-    for slot in range(0, num_sms):
-        print(fona.read_sms(slot))
-else:  # FONA800, 808
-    for slot in range(1, num_sms):
-        print(fona.read_sms(slot))
+# FONA3G SMS memory slots start at 0
+if fona.version == FONA_3G_A or fona.version == FONA_3G_E:
+    sms_idx = 0
+else: # FONA800 and FONA808 SMS slots start at 1
+    sms_idx = 1
+
+# Read num_sms messages from the FONA
+for slot in range(sms_idx, num_sms):
+    print(fona.read_sms(slot))
