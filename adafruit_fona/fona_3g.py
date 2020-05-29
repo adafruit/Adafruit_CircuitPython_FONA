@@ -55,9 +55,8 @@ class FONA3G(FONA):
     :param bool debug: Enable debugging output.
 
     """
-
     def __init__(self, uart, rst, ri=None, debug=False):
-        uart.baudrate = 4800
+        uart.baudrate=4800
         super(FONA3G, self).__init__(uart, rst, ri, debug)
 
     def set_baudrate(self, baudrate):
@@ -160,6 +159,8 @@ class FONA3G(FONA):
                 return False
         return True
 
+    ### SMS ###
+
     ### Socket API (TCP, UDP) ###
 
     @property
@@ -205,6 +206,7 @@ class FONA3G(FONA):
         self._read_line()
         self._uart_write(b"AT+CIPOPEN?\r\n")  # Query which sockets are busy
 
+        socket = 0
         for socket in range(0, FONA_MAX_SOCKETS):
             self._read_line(120000)
             try:  # SIMCOM5320 lacks a socket connection status, this is a workaround

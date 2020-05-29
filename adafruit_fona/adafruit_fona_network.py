@@ -49,7 +49,7 @@ class CELLULAR:
         self._network_connected = False
         self._network_type = NET_CDMA
 
-        if not self._iface._fona_type == 0x4 or self._iface._fona_type == 0x5:
+        if not self._iface.version == 0x4 or self._iface.version == 0x5:
             self._network_type = NET_GSM
             self._iface.gps = True
 
