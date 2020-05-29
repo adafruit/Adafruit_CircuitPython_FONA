@@ -20,22 +20,24 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 """
-`adafruit_fona_gsm`
+`adafruit_fona_network`
 =================================================================================
 
-Interface for 2G GSM cellular modems such as the Adafruit FONA808.
+Interface for connecting to and interacting with GSM and CDMA cellular networks.
 
 * Author(s): Brent Rubell
 
 """
 
+# Network types
+NET_GSM = 0x01
+NET_CDMA = 0x02
 
-class GSM:
-    """Interface for interacting with FONA 2G GSM modems.
-    """
+class NETWORK:
+    """Interface for connecting to and interacting with GSM and CDMA cellular networks."""
 
     def __init__(self, fona, apn):
-        """Initializes interface with 2G GSM modem.
+        """Initializes interface with cellular network.
         :param adafruit_fona fona: The Adafruit FONA module we are using.
         :param tuple apn: Tuple containing APN name, (optional) APN username,
                             and APN password.
@@ -43,10 +45,12 @@ class GSM:
         """
         self._iface = fona
         self._apn = apn
-        self._gsm_connected = False
+        self._network_connected = False
+        self._network_type = NET_CDMA
 
-        # Enable GPS module
-        self._iface.gps = True
+        if not self._iface._fona_type == 0x4 or self._iface._fona_type == 0x5:
+            self._network_type = NET_GSM
+            self._iface.gps = True
 
     def __enter__(self):
         return self
@@ -56,7 +60,7 @@ class GSM:
 
     @property
     def imei(self):
-        """Returns the GSM modem's IEMI number, as a string."""
+        """Returns the modem's IEMI number, as a string."""
         return self._iface.iemi
 
     @property
@@ -66,31 +70,31 @@ class GSM:
 
     @property
     def is_attached(self):
-        """Returns if the modem is attached to the network
-        and the GPS has a fix."""
-        if self._iface.gps == 3 and self._iface.network_status == 1:
-            return True
+        """Returns if the modem is attached to the network."""
+        if self._network_type == NET_GSM:
+            if self._iface.gps == 3 and self._iface.network_status == 1:
+                return True
+        else: # Attach CDMA network
+            if self._iface.ue_system_info == 1 and self._iface.network_status == 1:
+                return True
         return False
 
     @property
     def is_connected(self):
-        """Returns if attached to GSM
-        and an IP Addresss was obtained.
-
-        """
-        if not self._gsm_connected:
+        """Returns if attached to network and an IP Addresss was obtained."""
+        if not self._network_connected:
             return False
         return True
 
     def connect(self):
-        """Connect to GSM network."""
+        """Connect to cellular network."""
         if self._iface.set_gprs(self._apn, True):
-            self._gsm_connected = True
+            self._network_connected = True
         else:
             # reset context for next connection attempt
             self._iface.set_gprs(self._apn, False)
 
     def disconnect(self):
-        """Disconnect from GSM network."""
+        """Disconnect from cellular network."""
         self._iface.set_gprs(self._apn, False)
-        self._gsm_connected = False
+        self._network_connected = False
