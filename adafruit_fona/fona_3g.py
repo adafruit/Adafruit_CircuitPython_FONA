@@ -55,6 +55,7 @@ class FONA3G(FONA):
     :param bool debug: Enable debugging output.
 
     """
+
     def __init__(self, uart, rst, ri=None, debug=False):
         uart.baudrate = 4800
         super(FONA3G, self).__init__(uart, rst, ri, debug)
