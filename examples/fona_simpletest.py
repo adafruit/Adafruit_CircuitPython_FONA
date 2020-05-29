@@ -3,11 +3,12 @@ import board
 import busio
 import digitalio
 from adafruit_fona.adafruit_fona import FONA
-from adafruit_fona.adafruit_fona_gsm import GSM
+import adafruit_fona.fona_3g as FONA
+import adafruit_fona.adafruit_fona_network as network
 import adafruit_fona.adafruit_fona_socket as cellular_socket
 import adafruit_requests as requests
 
-print("FONA WebClient Test")
+print("FONA Webclient Test")
 
 TEXT_URL = "http://wifitest.adafruit.com/testwifi/index.html"
 JSON_URL = "http://api.coindesk.com/v1/bpi/currentprice/USD.json"
@@ -19,26 +20,29 @@ except ImportError:
     print("GPRS secrets are kept in secrets.py, please add them there!")
     raise
 
-# Create a serial connection for the FONA connection using 4800 baud.
-# These are the defaults you should use for the FONA Shield.
-# For other boards set RX = GPS module TX, and TX = GPS module RX pins.
+# Create a serial connection for the FONA connection
 uart = busio.UART(board.TX, board.RX, baudrate=4800)
-rst = digitalio.DigitalInOut(board.D4)
+rst = digitalio.DigitalInOut(board.D9)
 
-# Initialize FONA module (this may take a few seconds)
+# Use this for FONA800 and FONA808
 fona = FONA(uart, rst)
 
-# initialize gsm
-gsm = GSM(fona, (secrets["apn"], secrets["apn_username"], secrets["apn_password"]))
+# Use this for FONA3G
+# fona = FONA.FONA3G(uart, rst)
 
-while not gsm.is_attached:
+# Initialize cellular data network
+network = network.CELLULAR(fona, (secrets["apn"], secrets["apn_username"], secrets["apn_password"]))
+
+while not network.is_attached:
     print("Attaching to network...")
     time.sleep(0.5)
+print("Attached!")
 
-while not gsm.is_connected:
+while not network.is_connected:
     print("Connecting to network...")
-    gsm.connect()
-    time.sleep(5)
+    network.connect()
+    time.sleep(0.5)
+print("Network Connected!")
 
 print("My IP address is:", fona.local_ip)
 print("IP lookup adafruit.com: %s" % fona.get_host_by_name("adafruit.com"))
@@ -48,15 +52,16 @@ requests.set_socket(cellular_socket, fona)
 
 # fona._debug = True
 print("Fetching text from", TEXT_URL)
-r = requests.get(TEXT_URL)
+r = requests.get(TEXT_URL, headers={"Connection": "keep-alive"})
 print("-" * 40)
 print(r.text)
 print("-" * 40)
 r.close()
 
+
 print()
 print("Fetching json from", JSON_URL)
-r = requests.get(JSON_URL)
+r = requests.get(JSON_URL, headers={"Connection": "keep-alive"})
 print("-" * 40)
 print(r.json())
 print("-" * 40)
