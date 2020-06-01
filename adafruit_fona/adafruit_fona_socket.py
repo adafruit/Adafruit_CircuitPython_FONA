@@ -103,7 +103,10 @@ class socket:
             raise RuntimeError("Only AF_INET family supported by cellular sockets.")
         self._sock_type = type
         self._buffer = b""
-        self._timeout = 0
+        if hasattr(_the_interface, "tx_timeout"):
+            self._timeout = _the_interface.tx_timeout
+        else:
+            self._timeout = 3000  # FONA800
 
         self._socknum = _the_interface.get_socket()
         SOCKETS.append(self._socknum)
@@ -157,7 +160,7 @@ class socket:
         :param bytes data: Desired data to send to the socket.
 
         """
-        _the_interface.socket_write(self._socknum, data)
+        _the_interface.socket_write(self._socknum, data, self._timeout)
         gc.collect()
 
     def recv(self, bufsize=0):
