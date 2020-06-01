@@ -23,7 +23,7 @@ except ImportError:
 
 # Create a serial connection for the FONA connection
 uart = busio.UART(board.TX, board.RX)
-rst = digitalio.DigitalInOut(board.D9)
+rst = digitalio.DigitalInOut(board.D4)
 
 # Use this for FONA800 and FONA808
 fona = FONA(uart, rst)
