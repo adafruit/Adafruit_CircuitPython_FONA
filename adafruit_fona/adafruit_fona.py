@@ -449,7 +449,6 @@ class FONA:
         if self._ri is not None:  # poll the RI pin
             if self._ri.value:
                 return False, False
-
         if not self._uart.in_waiting:  # otherwise, poll the UART
             return False, False
 

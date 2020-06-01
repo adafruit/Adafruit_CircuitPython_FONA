@@ -11,12 +11,14 @@ print("FONA SMS Response")
 # Create a serial connection for the FONA connection
 uart = busio.UART(board.TX, board.RX)
 rst = digitalio.DigitalInOut(board.D4)
+# Ring Indicator (RI) interrupt pin
+ri = digitalio.DigitalInOut(board.D5)
 
 # Use this for FONA800 and FONA808
-fona = FONA(uart, rst)
+fona = FONA(uart, rst, ri)
 
 # Use this for FONA3G
-# fona = FONA3G(uart, rst)
+# fona = FONA3G(uart, rst, ri)
 
 # Initialize Network
 while fona.network_status != 1:
