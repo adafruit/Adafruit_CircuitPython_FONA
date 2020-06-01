@@ -441,14 +441,17 @@ class FONA:
     def receive_sms(self):
         """Checks for a message notification from the FONA module,
         replies back with the a tuple containing (sender, message).
+        NOTE: This method needs to be polled consistently due to the lack
+        of hw-based interrupts in CircuitPython. Adding time.sleep delays
+        may cause missed messages if using the RI pin instead of UART.
 
         """
         if self._ri is not None:  # poll the RI pin
-            if not self._ri.value:
+            if self._ri.value:
                 return False, False
-        else:  # poll the UART instead
-            if not self._uart.in_waiting:
-                return False, False
+
+        if not self._uart.in_waiting:  # otherwise, poll the UART
+            return False, False
 
         self._read_line()  # parse the rcv'd URC
         if not self._parse_reply(b"+CMTI: ", idx=1):
@@ -597,6 +600,7 @@ class FONA:
         """Converts a hostname to a packed 4-byte IP address.
         Returns a 4 bytearray.
         :param str hostname: Destination server.
+
         """
         self._read_line()
         if self._debug:
@@ -609,11 +613,9 @@ class FONA:
         ):
             return False
 
-        # attempt to parse a response
         self._read_line()
         while not self._parse_reply(b"+CDNSGIP:", idx=2):
             self._read_line()
-
         return self._buf
 
     def get_socket(self):
