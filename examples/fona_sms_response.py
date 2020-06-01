@@ -42,4 +42,3 @@ while True:
         if not fona.send_sms(int(sender), "Hey, I got your text!"):
             print("SMS Send Failed")
         print("SMS Sent!")
-    time.sleep(1)
