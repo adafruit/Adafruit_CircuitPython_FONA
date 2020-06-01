@@ -597,7 +597,6 @@ class FONA:
         """Converts a hostname to a packed 4-byte IP address.
         Returns a 4 bytearray.
         :param str hostname: Destination server.
-
         """
         self._read_line()
         if self._debug:
@@ -610,9 +609,11 @@ class FONA:
         ):
             return False
 
+        # attempt to parse a response
         self._read_line()
         while not self._parse_reply(b"+CDNSGIP:", idx=2):
             self._read_line()
+
         return self._buf
 
     def get_socket(self):
