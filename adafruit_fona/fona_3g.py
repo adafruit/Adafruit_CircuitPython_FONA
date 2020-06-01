@@ -160,8 +160,6 @@ class FONA3G(FONA):
                 return False
         return True
 
-    ### SMS ###
-
     ### Socket API (TCP, UDP) ###
 
     @property
