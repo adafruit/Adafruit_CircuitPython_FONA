@@ -374,10 +374,6 @@ class FONA:
 
     @gps.setter
     def gps(self, gps_on=False):
-        """Enables or disables GPS module.
-        :param bool gps_on: Enables the GPS module, disabled by default.
-
-        """
         if not (
             self._fona_type == FONA_3G_A
             or self._fona_type == FONA_3G_E
@@ -433,7 +429,6 @@ class FONA:
 
     @enable_sms_notification.setter
     def enable_sms_notification(self, enable=True):
-        """Enables or disables new SMS message notifications."""
         if enable:
             if not self._send_check_reply(b"AT+CNMI=2,1\r\n", reply=REPLY_OK):
                 return False

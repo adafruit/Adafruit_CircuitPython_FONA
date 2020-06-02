@@ -77,10 +77,6 @@ class FONA3G(FONA):
 
     @gps.setter
     def gps(self, gps_on=False):
-        """Enables or disables GPS module.
-        :param bool gps_on: Enables the GPS module, disabled by default.
-
-        """
         # check if GPS is already enabled
         if not self._send_parse_reply(b"AT+CGPS?", b"+CGPS: "):
             return False
@@ -172,7 +168,6 @@ class FONA3G(FONA):
 
     @tx_timeout.setter
     def tx_timeout(self, timeout):
-        """Sets CIPSEND timeout, in milliseconds."""
         self._read_line()
         if not self._send_check_reply(
             b"AT+CIPTIMEOUT=" + str(timeout).encode(), reply=REPLY_OK
