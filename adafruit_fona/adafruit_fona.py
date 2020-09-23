@@ -502,7 +502,7 @@ class FONA:
 
         """
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
-            return None
+            raise RuntimeError("Operating mode not supported by FONA module.")
 
         if sim_storage:  # ask how many SMS are stored
             if self._send_parse_reply(b"AT+CPMS?", FONA_SMS_STORAGE_SIM + b",", idx=1):
