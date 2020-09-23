@@ -497,7 +497,7 @@ class FONA:
         return True
 
     def num_sms(self, sim_storage=True):
-        """Number of SMS messages stored in memory.
+        """Returns the number of SMS messages stored in memory.
         :param bool sim_storage: SMS storage on the SIM, otherwise internal storage on FONA chip.
 
         """
@@ -636,7 +636,7 @@ class FONA:
         return allocated_socket
 
     def remote_ip(self, sock_num):
-        """IP address of the remote server.
+        """Returns the IP address of the remote server.
         :param int sock_num: Desired socket.
 
         """
@@ -651,7 +651,7 @@ class FONA:
         return self._buf
 
     def socket_status(self, sock_num):
-        """Socket connection status, False if not connected to remote server.
+        """Returns the socket connection status, False if not connected.
         :param int sock_num: Desired socket number.
 
         """
@@ -681,7 +681,7 @@ class FONA:
         return True
 
     def socket_available(self, sock_num):
-        """Amount of bytes available to be read from the socket.
+        """Returns the amount of bytes available to be read from the socket.
         :param int sock_num: Desired socket to return bytes available from.
 
         """

@@ -193,7 +193,7 @@ class FONA3G(FONA):
         return self._buf
 
     def get_socket(self):
-        """Obtains an unused socket."""
+        """Returns an unused socket."""
         if self._debug:
             print("*** Get socket")
 
@@ -254,7 +254,8 @@ class FONA3G(FONA):
         return True
 
     def remote_ip(self, sock_num):
-        """IP address of remote connection."""
+        """Returns the IP address of the remote connection.
+        """
         self._read_line()
         assert (
             sock_num < FONA_MAX_SOCKETS
@@ -313,7 +314,7 @@ class FONA3G(FONA):
         return True
 
     def socket_status(self, sock_num):
-        """Socket status, True if connected. False otherwise.
+        """Returns socket status, True if connected. False otherwise.
         :param int sock_num: Desired socket number.
 
         """
