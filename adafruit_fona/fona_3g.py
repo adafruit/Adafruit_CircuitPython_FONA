@@ -58,7 +58,7 @@ class FONA3G(FONA):
 
     def __init__(self, uart, rst, ri=None, debug=False):
         uart.baudrate = 4800
-        super(FONA3G, self).__init__(uart, rst, ri, debug)
+        super().__init__(uart, rst, ri, debug)
 
     def set_baudrate(self, baudrate):
         """Sets the FONA's UART baudrate."""

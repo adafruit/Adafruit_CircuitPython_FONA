@@ -57,13 +57,11 @@ def htons(x):
     return (((x) << 8) & 0xFF00) | (((x) >> 8) & 0xFF)
 
 
-# pylint: disable=bad-whitespace
 SOCK_STREAM = const(0x00)  # TCP
 TCP_MODE = 80
 SOCK_DGRAM = const(0x01)  # UDP
 AF_INET = const(3)
 NO_SOCKET_AVAIL = const(255)
-# pylint: enable=bad-whitespace
 
 # keep track of sockets we allocate
 SOCKETS = []

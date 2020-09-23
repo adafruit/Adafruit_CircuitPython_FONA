@@ -44,7 +44,6 @@ from simpleio import map_range
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_FONA.git"
 
-# pylint: disable=bad-whitespace
 FONA_DEFAULT_TIMEOUT_MS = 500  # TODO: Check this against arduino...
 
 # Commands
@@ -67,7 +66,6 @@ FONA_3G_E = const(0x5)
 # FONA preferred SMS storage
 FONA_SMS_STORAGE_SIM = b'"SM"'  # Storage on the SIM
 FONA_SMS_STORAGE_INTERNAL = b'"ME"'  # Internal storage on the FONA
-# pylint: enable=bad-whitespace
 
 
 # pylint: disable=too-many-instance-attributes, too-many-public-methods
