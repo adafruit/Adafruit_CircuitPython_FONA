@@ -499,8 +499,9 @@ class FONA:
         return True
 
     def num_sms(self, sim_storage=True):
-        """Number of SMS messages stored in memory, None otherwise.
+        """Number of SMS messages stored in memory.
         :param bool sim_storage: SMS storage on the SIM, otherwise internal storage on FONA chip.
+
         """
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
             return None
@@ -521,7 +522,7 @@ class FONA:
         self._read_line()  # eat OK
         if self._send_parse_reply(b"AT+CPMS?", b'"SM_P",', idx=1):
             return self._buf
-        return None
+        return 0
 
     def delete_sms(self, sms_slot):
         """Deletes a SMS message from a storage (internal or sim) slot
