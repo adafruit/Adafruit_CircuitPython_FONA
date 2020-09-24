@@ -44,7 +44,6 @@ from simpleio import map_range
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_FONA.git"
 
-# pylint: disable=bad-whitespace
 FONA_DEFAULT_TIMEOUT_MS = 500  # TODO: Check this against arduino...
 
 # Commands
@@ -67,7 +66,6 @@ FONA_3G_E = const(0x5)
 # FONA preferred SMS storage
 FONA_SMS_STORAGE_SIM = b'"SM"'  # Storage on the SIM
 FONA_SMS_STORAGE_INTERNAL = b'"ME"'  # Internal storage on the FONA
-# pylint: enable=bad-whitespace
 
 
 # pylint: disable=too-many-instance-attributes, too-many-public-methods
@@ -177,12 +175,14 @@ class FONA:
     @property
     # pylint: disable=too-many-return-statements
     def version(self):
-        """Returns FONA Version."""
+        """The version of the FONA module. Can be FONA_800_L,
+        FONA_800_H, FONA_808_V1, FONA_808_V2, FONA_3G_A, FONA3G_E.
+        """
         return self._fona_type
 
     @property
     def iemi(self):
-        """Returns FONA module's IEMI number."""
+        """FONA Module's IEMI (International Mobile Equipment Identity) number."""
         if self._debug:
             print("FONA IEMI")
         self._uart.reset_input_buffer()
@@ -194,18 +194,18 @@ class FONA:
 
     @property
     def local_ip(self):
-        """Returns the local IP Address, False if not set."""
+        """Module's local IP address, None if not set."""
         self._uart_write(b"AT+CIFSR\r\n")
         self._read_line()
         try:
             ip_addr = self.pretty_ip(self._buf)
         except ValueError:
-            return False
+            return None
         return ip_addr
 
     @property
     def iccid(self):
-        """Returns SIM Card's ICCID number as a string."""
+        """SIM Card's unique ICCID (Integrated Circuit Card Identifier)."""
         if self._debug:
             print("ICCID")
         self._uart_write(b"AT+CCID\r\n")
@@ -215,7 +215,7 @@ class FONA:
 
     @property
     def gprs(self):
-        """Returns module's GPRS state."""
+        """GPRS (General Packet Radio Services) power status."""
         if not self._send_parse_reply(b"AT+CGATT?", b"+CGATT: ", ":"):
             return False
         if not self._buf:
@@ -311,7 +311,7 @@ class FONA:
 
     @property
     def network_status(self):
-        """Returns cellular network status"""
+        """The status of the cellular network."""
         self._read_line()
         if self._debug:
             print("Network status")
@@ -324,7 +324,9 @@ class FONA:
 
     @property
     def rssi(self):
-        """Returns cellular network's Received Signal Strength Indicator (RSSI)."""
+        """The received signal strength indicator for the cellular network
+        we are connected to.
+        """
         if self._debug:
             print("RSSI")
         if not self._send_parse_reply(b"AT+CSQ", b"+CSQ: "):
@@ -347,7 +349,7 @@ class FONA:
 
     @property
     def gps(self):
-        """Returns the GPS fix."""
+        """Module's GPS status."""
         if self._debug:
             print("GPS Fix")
         if self._fona_type == FONA_808_V2:
@@ -370,10 +372,6 @@ class FONA:
 
     @gps.setter
     def gps(self, gps_on=False):
-        """Sets GPS module power, parses returned buffer.
-        :param bool gps_on: Enables the GPS module, disabled by default.
-
-        """
         if not (
             self._fona_type == FONA_3G_A
             or self._fona_type == FONA_3G_E
@@ -422,14 +420,13 @@ class FONA:
 
     @property
     def enable_sms_notification(self):
-        """Returns status of new SMS message notifications"""
+        """Checks if SMS notifications are enabled."""
         if not self._send_parse_reply(b"AT+CNMI?\r\n", b"+CNMI:", idx=1):
             return False
         return self._buf
 
     @enable_sms_notification.setter
     def enable_sms_notification(self, enable=True):
-        """Enables or disables new SMS message notifications."""
         if enable:
             if not self._send_check_reply(b"AT+CNMI=2,1\r\n", reply=REPLY_OK):
                 return False
@@ -442,8 +439,7 @@ class FONA:
         """Checks for a message notification from the FONA module,
         replies back with the a tuple containing (sender, message).
         NOTE: This method needs to be polled consistently due to the lack
-        of hw-based interrupts in CircuitPython. Adding time.sleep delays
-        may cause missed messages if using the RI pin instead of UART.
+        of hw-based interrupts in CircuitPython.
 
         """
         if self._ri is not None:  # poll the RI pin
@@ -501,12 +497,12 @@ class FONA:
         return True
 
     def num_sms(self, sim_storage=True):
-        """Returns the number of SMS messages stored in memory, False if none stored.
+        """Returns the number of SMS messages stored in memory.
         :param bool sim_storage: SMS storage on the SIM, otherwise internal storage on FONA chip.
 
         """
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
-            return False
+            raise RuntimeError("Operating mode not supported by FONA module.")
 
         if sim_storage:  # ask how many SMS are stored
             if self._send_parse_reply(b"AT+CPMS?", FONA_SMS_STORAGE_SIM + b",", idx=1):
@@ -524,10 +520,10 @@ class FONA:
         self._read_line()  # eat OK
         if self._send_parse_reply(b"AT+CPMS?", b'"SM_P",', idx=1):
             return self._buf
-        return False
+        return 0
 
     def delete_sms(self, sms_slot):
-        """Deletes a SMS message in the provided SMS slot.
+        """Deletes a SMS message from a storage (internal or sim) slot
         :param int sms_slot: SMS SIM or FONA memory slot number.
 
         """
@@ -597,7 +593,6 @@ class FONA:
 
     def get_host_by_name(self, hostname):
         """Converts a hostname to a packed 4-byte IP address.
-        Returns a 4 bytearray.
         :param str hostname: Destination server.
 
         """
@@ -618,9 +613,7 @@ class FONA:
         return self._buf
 
     def get_socket(self):
-        """Returns an avaliable socket (INITIAL or CLOSED state).
-
-        """
+        """Obtains a socket, if available."""
         if self._debug:
             print("*** Get socket")
 
@@ -643,7 +636,7 @@ class FONA:
         return allocated_socket
 
     def remote_ip(self, sock_num):
-        """Returns the IP address of the host who sent the current incoming packet.
+        """Returns the IP address of the remote server.
         :param int sock_num: Desired socket.
 
         """
@@ -658,7 +651,7 @@ class FONA:
         return self._buf
 
     def socket_status(self, sock_num):
-        """Returns if socket is connected.
+        """Returns the socket connection status, False if not connected.
         :param int sock_num: Desired socket number.
 
         """
@@ -688,7 +681,7 @@ class FONA:
         return True
 
     def socket_available(self, sock_num):
-        """Returns the amount of bytes to be read from the socket.
+        """Returns the amount of bytes available to be read from the socket.
         :param int sock_num: Desired socket to return bytes available from.
 
         """

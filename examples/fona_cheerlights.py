@@ -3,15 +3,13 @@ import time
 import board
 import busio
 import digitalio
+import neopixel
+import adafruit_requests as requests
+import adafruit_fancyled.adafruit_fancyled as fancy
 from adafruit_fona.adafruit_fona import FONA
 from adafruit_fona.fona_3g import FONA3G
 import adafruit_fona.adafruit_fona_network as network
 import adafruit_fona.adafruit_fona_socket as cellular_socket
-import adafruit_requests as requests
-
-import neopixel
-import adafruit_fancyled.adafruit_fancyled as fancy
-
 
 # Get GPRS details and more from a secrets.py file
 try:
