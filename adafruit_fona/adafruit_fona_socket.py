@@ -65,7 +65,8 @@ def gethostbyname(hostname):
     :param str hostname: Desired hostname.
     """
     addr = _the_interface.get_host_by_name(hostname)
-    return addr.strip('"')
+    addr = addr.strip('"')
+    return addr
 
 
 # pylint: disable=invalid-name, redefined-builtin
