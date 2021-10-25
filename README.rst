@@ -61,6 +61,11 @@ Usage Example
 
 Please see the examples directory for code usage.
 
+Documentation
+=============
+
+API documentation for this library can be found on `Read the Docs <https://circuitpython.readthedocs.io/projects/fona/en/latest/>`_.
+
 Contributing
 ============
 
