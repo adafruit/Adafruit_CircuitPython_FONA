@@ -355,12 +355,7 @@ class FONA:
 
     @gps.setter
     def gps(self, gps_on=False):
-        if not (
-            self._fona_type == FONA_3G_A
-            or self._fona_type == FONA_3G_E
-            or self._fona_type == FONA_808_V1
-            or self._fona_type == FONA_808_V2
-        ):
+        if self._fona_type not in (FONA_3G_A, FONA_3G_E, FONA_808_V1, FONA_808_V2):
             raise TypeError("GPS unsupported for this FONA module.")
 
         # check if already enabled or disabled
@@ -466,7 +461,7 @@ class FONA:
         # write out message and ^z
         self._uart_write((message + chr(26)).encode())
 
-        if self._fona_type == FONA_3G_A or self._fona_type == FONA_3G_E:
+        if self._fona_type in (FONA_3G_A, FONA_3G_E):
             self._read_line(200)  # eat first 'CRLF'
             self._read_line(200)  # eat second 'CRLF'
 
@@ -526,7 +521,7 @@ class FONA:
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
             return False
 
-        if self._fona_type == FONA_3G_A or self._fona_type == FONA_3G_E:
+        if self._fona_type in (FONA_3G_A, FONA_3G_E):
             num_sms = self.num_sms()
             for slot in range(0, num_sms):
                 if not self.delete_sms(slot):
@@ -742,7 +737,7 @@ class FONA:
         self._uart_write(b"AT+CIPCLOSE=" + str(sock_num).encode() + b"\r\n")
         self._read_line(3000)
 
-        if self._fona_type == FONA_3G_A or self._fona_type == FONA_3G_E:
+        if self._fona_type in (FONA_3G_A, FONA_3G_E):
             if not self._expect_reply(REPLY_OK):
                 return False
         else:
