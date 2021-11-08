@@ -39,7 +39,7 @@ num_sms = fona.num_sms()
 print("%d SMS's on SIM Card" % num_sms)
 
 # FONA3G SMS memory slots start at 0
-if fona.version == FONA_3G_A or fona.version == FONA_3G_E:
+if fona.version in (FONA_3G_A, FONA_3G_E):
     sms_idx = 0
 else:  # FONA800 and FONA808 SMS slots start at 1
     sms_idx = 1
