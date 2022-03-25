@@ -595,7 +595,7 @@ class FONA:
 
     ### Socket API (TCP, UDP) ###
 
-    def get_host_by_name(self, hostname: str) -> bytes:
+    def get_host_by_name(self, hostname: str) -> str:
         """Converts a hostname to a packed 4-byte IP address.
 
         :param str hostname: Destination server.
