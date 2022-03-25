@@ -27,7 +27,7 @@ from micropython import const
 from simpleio import map_range
 
 try:
-    from typing import Optional, Tuple
+    from typing import Optional, Tuple, Union, Literal
     from circuitpython_typing import ReadableBuffer
     from busio import UART
     from digitalio import DigitalInOut
@@ -595,7 +595,7 @@ class FONA:
 
     ### Socket API (TCP, UDP) ###
 
-    def get_host_by_name(self, hostname: str) -> str:
+    def get_host_by_name(self, hostname: str) -> Union[str, Literal[False]]:
         """Converts a hostname to a packed 4-byte IP address.
 
         :param str hostname: Destination server.
@@ -847,7 +847,6 @@ class FONA:
         :param bytes send_data: Data to send to the module.
         :param bytes send_data: Data received by the FONA module.
         :param str divider: Separator
-
         """
         self._read_line()
         self._get_reply(send_data)
