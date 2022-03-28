@@ -24,6 +24,13 @@ Implementation Notes
 from micropython import const
 from .adafruit_fona import FONA, REPLY_OK
 
+try:
+    from typing import Optional, Tuple, Union, Literal
+    from busio import UART
+    from digitalio import DigitalInOut
+except ImportError:
+    pass
+
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_FONA.git"
 
@@ -32,18 +39,24 @@ FONA_MAX_SOCKETS = const(10)
 
 class FONA3G(FONA):
     """FONA 3G module interface.
-    :param ~busio.uart UART: FONA UART connection.
-    :param ~digialio RST: FONA RST pin.
-    :param ~digialio RI: Optional FONA Ring Interrupt (RI) pin.
-    :param bool debug: Enable debugging output.
 
+    :param ~busio.uart uart: FONA UART connection.
+    :param ~DigitalInOut rst: FONA RST pin.
+    :param ~DigitalInOut ri: Optional FONA Ring Interrupt (RI) pin.
+    :param bool debug: Enable debugging output.
     """
 
-    def __init__(self, uart, rst, ri=None, debug=False):
+    def __init__(
+        self,
+        uart: UART,
+        rst: DigitalInOut,
+        ri: Optional[DigitalInOut] = None,
+        debug: bool = False,
+    ) -> None:
         uart.baudrate = 4800
         super().__init__(uart, rst, ri, debug)
 
-    def set_baudrate(self, baudrate):
+    def set_baudrate(self, baudrate: int) -> bool:
         """Sets the FONA's UART baudrate."""
         if not self._send_check_reply(
             b"AT+IPREX=" + str(baudrate).encode(), reply=REPLY_OK
@@ -52,14 +65,14 @@ class FONA3G(FONA):
         return True
 
     @property
-    def gps(self):
+    def gps(self) -> bool:
         """Module's GPS status."""
         if not self._send_check_reply(b"AT+CGPS?", reply=b"+CGPS: 1,1"):
             return False
         return True
 
     @gps.setter
-    def gps(self, gps_on=False):
+    def gps(self, gps_on: bool = False) -> bool:
         # check if GPS is already enabled
         if not self._send_parse_reply(b"AT+CGPS?", b"+CGPS: "):
             return False
@@ -77,7 +90,7 @@ class FONA3G(FONA):
         return True
 
     @property
-    def ue_system_info(self):
+    def ue_system_info(self) -> bool:
         """UE System status."""
         self._send_parse_reply(b"AT+CPSI?\r\n", b"+CPSI: ")
         if not self._buf == "GSM" or self._buf == "WCDMA":  # 5.15
@@ -85,17 +98,22 @@ class FONA3G(FONA):
         return True
 
     @property
-    def local_ip(self):
+    def local_ip(self) -> Optional[str]:
         """Module's local IP address, None if not set."""
         if not self._send_parse_reply(b"AT+IPADDR", b"+IPADDR:"):
             return None
         return self._buf
 
     # pylint: disable=too-many-return-statements
-    def set_gprs(self, apn=None, enable=True):
+    def set_gprs(
+        self,
+        apn: Optional[Tuple[str, Optional[str], Optional[str]]] = None,
+        enable: bool = True,
+    ) -> bool:
         """Configures and brings up GPRS.
-        :param bool enable: Enables or disables GPRS.
 
+        :param tuple apn:  APN configuration settings
+        :param bool enable: Enables or disables GPRS.
         """
         if enable:
             if not self._send_check_reply(b"AT+CGATT=1", reply=REPLY_OK, timeout=10000):
@@ -142,7 +160,7 @@ class FONA3G(FONA):
     ### Socket API (TCP, UDP) ###
 
     @property
-    def tx_timeout(self):
+    def tx_timeout(self) -> bool:
         """CIPSEND timeout, in milliseconds."""
         self._read_line()
         if not self._send_parse_reply(b"AT+CIPTIMEOUT?", b"+CIPTIMEOUT:", idx=2):
@@ -150,7 +168,7 @@ class FONA3G(FONA):
         return True
 
     @tx_timeout.setter
-    def tx_timeout(self, timeout):
+    def tx_timeout(self, timeout: int) -> bool:
         self._read_line()
         if not self._send_check_reply(
             b"AT+CIPTIMEOUT=" + str(timeout).encode(), reply=REPLY_OK
@@ -158,8 +176,9 @@ class FONA3G(FONA):
             return False
         return True
 
-    def get_host_by_name(self, hostname):
+    def get_host_by_name(self, hostname: str) -> Union[str, Literal[False]]:
         """Converts a hostname to a 4-byte IP address.
+
         :param str hostname: Domain name.
         """
         self._read_line()
@@ -175,7 +194,7 @@ class FONA3G(FONA):
             return False
         return self._buf
 
-    def get_socket(self):
+    def get_socket(self) -> int:
         """Returns an unused socket."""
         if self._debug:
             print("*** Get socket")
@@ -198,14 +217,16 @@ class FONA3G(FONA):
             print("Allocated socket #%d" % socket)
         return socket
 
-    def socket_connect(self, sock_num, dest, port, conn_mode=0):
+    def socket_connect(
+        self, sock_num: int, dest: str, port: int, conn_mode: int = 0
+    ) -> bool:
         """Connects to a destination IP address or hostname.
         By default, we use conn_mode TCP_MODE but we may also use UDP_MODE.
+
         :param int sock_num: Desired socket number
         :param str dest: Destination dest address.
         :param int port: Destination dest port.
         :param int conn_mode: Connection mode (TCP/UDP)
-
         """
         if self._debug:
             print(
@@ -236,8 +257,11 @@ class FONA3G(FONA):
             return False
         return True
 
-    def remote_ip(self, sock_num):
-        """Returns the IP address of the remote connection."""
+    def remote_ip(self, sock_num: int) -> str:
+        """Returns the IP address of the remote connection.
+
+        :param int sock_num: Desired socket number
+        """
         self._read_line()
         assert (
             sock_num < FONA_MAX_SOCKETS
@@ -254,12 +278,12 @@ class FONA3G(FONA):
             self._read_line()  # eat the rest of '+CIPOPEN' responses
         return ip_addr
 
-    def socket_write(self, sock_num, buffer, timeout=120000):
+    def socket_write(self, sock_num: int, buffer: bytes, timeout: int = 120000) -> bool:
         """Writes len(buffer) bytes to the socket.
+
         :param int sock_num: Desired socket number to write to.
         :param bytes buffer: Bytes to write to socket.
         :param int timeout: Socket write timeout, in milliseconds. Defaults to 120000ms.
-
         """
         self._read_line()
         assert (
@@ -295,10 +319,10 @@ class FONA3G(FONA):
             return False
         return True
 
-    def socket_status(self, sock_num):
+    def socket_status(self, sock_num: int) -> bool:
         """Returns socket status, True if connected. False otherwise.
-        :param int sock_num: Desired socket number.
 
+        :param int sock_num: Desired socket number.
         """
         if not self._send_parse_reply(b"AT+CIPCLOSE?", b"+CIPCLOSE:", idx=sock_num):
             return False

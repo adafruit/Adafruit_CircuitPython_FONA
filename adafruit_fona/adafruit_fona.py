@@ -3,6 +3,8 @@
 #
 # SPDX-License-Identifier: MIT
 
+# pylint: disable=too-many-lines
+
 """
 `adafruit_fona`
 ================================================================================
@@ -23,6 +25,14 @@ Implementation Notes
 import time
 from micropython import const
 from simpleio import map_range
+
+try:
+    from typing import Optional, Tuple, Union, Literal
+    from circuitpython_typing import ReadableBuffer
+    from busio import UART
+    from digitalio import DigitalInOut
+except ImportError:
+    pass
 
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_FONA.git"
@@ -65,7 +75,13 @@ class FONA:
     UDP_MODE = const(1)  # UDP socket
 
     # pylint: disable=too-many-arguments
-    def __init__(self, uart, rst, ri=None, debug=False):
+    def __init__(
+        self,
+        uart: UART,
+        rst: DigitalInOut,
+        ri: Optional[DigitalInOut] = None,
+        debug: bool = False,
+    ) -> None:
         self._buf = b""  # shared buffer
         self._fona_type = 0
         self._debug = debug
@@ -79,7 +95,7 @@ class FONA:
             raise RuntimeError("Unable to find FONA. Please check connections.")
 
     # pylint: disable=too-many-branches, too-many-statements
-    def _init_fona(self):
+    def _init_fona(self) -> bool:
         """Initializes FONA module."""
         self.reset()
 
@@ -136,7 +152,7 @@ class FONA:
                 self._fona_type = FONA_800_H
         return True
 
-    def factory_reset(self):
+    def factory_reset(self) -> bool:
         """Resets modem to factory configuration."""
         self._uart_write(b"ATZ\r\n")
 
@@ -144,7 +160,7 @@ class FONA:
             return False
         return True
 
-    def reset(self):
+    def reset(self) -> None:
         """Performs a hardware reset on the modem."""
         if self._debug:
             print("* Reset FONA")
@@ -157,14 +173,14 @@ class FONA:
 
     @property
     # pylint: disable=too-many-return-statements
-    def version(self):
+    def version(self) -> int:
         """The version of the FONA module. Can be FONA_800_L,
         FONA_800_H, FONA_808_V1, FONA_808_V2, FONA_3G_A, FONA3G_E.
         """
         return self._fona_type
 
     @property
-    def iemi(self):
+    def iemi(self) -> str:
         """FONA Module's IEMI (International Mobile Equipment Identity) number."""
         if self._debug:
             print("FONA IEMI")
@@ -176,7 +192,7 @@ class FONA:
         return iemi.decode("utf-8")
 
     @property
-    def local_ip(self):
+    def local_ip(self) -> Optional[str]:
         """Module's local IP address, None if not set."""
         self._uart_write(b"AT+CIFSR\r\n")
         self._read_line()
@@ -187,7 +203,7 @@ class FONA:
         return ip_addr
 
     @property
-    def iccid(self):
+    def iccid(self) -> str:
         """SIM Card's unique ICCID (Integrated Circuit Card Identifier)."""
         if self._debug:
             print("ICCID")
@@ -197,7 +213,7 @@ class FONA:
         return iccid
 
     @property
-    def gprs(self):
+    def gprs(self) -> bool:
         """GPRS (General Packet Radio Services) power status."""
         if not self._send_parse_reply(b"AT+CGATT?", b"+CGATT: ", ":"):
             return False
@@ -206,10 +222,15 @@ class FONA:
         return True
 
     # pylint: disable=too-many-return-statements
-    def set_gprs(self, apn=None, enable=True):
+    def set_gprs(
+        self,
+        apn: Optional[Tuple[str, Optional[str], Optional[str]]] = None,
+        enable: bool = True,
+    ) -> bool:
         """Configures and brings up GPRS.
-        :param bool enable: Enables or disables GPRS.
 
+        :param tuple apn: The APN information
+        :param bool enable: Enables or disables GPRS.
         """
         if enable:
             apn_name, apn_user, apn_pass = apn
@@ -293,7 +314,7 @@ class FONA:
         return True
 
     @property
-    def network_status(self):
+    def network_status(self) -> int:
         """The status of the cellular network."""
         self._read_line()
         if self._debug:
@@ -306,7 +327,7 @@ class FONA:
         return status
 
     @property
-    def rssi(self):
+    def rssi(self) -> float:
         """The received signal strength indicator for the cellular network
         we are connected to.
         """
@@ -331,7 +352,7 @@ class FONA:
         return rssi
 
     @property
-    def gps(self):
+    def gps(self) -> int:
         """Module's GPS status."""
         if self._debug:
             print("GPS Fix")
@@ -354,7 +375,7 @@ class FONA:
         return status
 
     @gps.setter
-    def gps(self, gps_on=False):
+    def gps(self, gps_on: bool = False) -> bool:
         if self._fona_type not in (FONA_3G_A, FONA_3G_E, FONA_808_V1, FONA_808_V2):
             raise TypeError("GPS unsupported for this FONA module.")
 
@@ -385,11 +406,15 @@ class FONA:
 
         return True
 
-    def pretty_ip(self, ip):  # pylint: disable=no-self-use, invalid-name
+    def pretty_ip(  # pylint: disable=no-self-use, invalid-name
+        self, ip: ReadableBuffer
+    ) -> str:
         """Converts a bytearray IP address to a dotted-quad string for printing"""
         return "%d.%d.%d.%d" % (ip[0], ip[1], ip[2], ip[3])
 
-    def unpretty_ip(self, ip):  # pylint: disable=no-self-use, invalid-name
+    def unpretty_ip(  # pylint: disable=no-self-use, invalid-name
+        self, ip: str
+    ) -> bytes:
         """Converts a dotted-quad string to a bytearray IP address"""
         octets = [int(x) for x in ip.split(".")]
         return bytes(octets)
@@ -397,14 +422,14 @@ class FONA:
     ### SMS ###
 
     @property
-    def enable_sms_notification(self):
+    def enable_sms_notification(self) -> bool:
         """Checks if SMS notifications are enabled."""
         if not self._send_parse_reply(b"AT+CNMI?\r\n", b"+CNMI:", idx=1):
             return False
         return self._buf
 
     @enable_sms_notification.setter
-    def enable_sms_notification(self, enable=True):
+    def enable_sms_notification(self, enable: bool = True) -> bool:
         if enable:
             if not self._send_check_reply(b"AT+CNMI=2,1\r\n", reply=REPLY_OK):
                 return False
@@ -413,9 +438,10 @@ class FONA:
                 return False
         return True
 
-    def receive_sms(self):
+    def receive_sms(self) -> Tuple[str, str]:
         """Checks for a message notification from the FONA module,
         replies back with the a tuple containing (sender, message).
+
         NOTE: This method needs to be polled consistently due to the lack
         of hw-based interrupts in CircuitPython.
 
@@ -437,11 +463,11 @@ class FONA:
 
         return sender, message.strip()
 
-    def send_sms(self, phone_number, message):
+    def send_sms(self, phone_number: int, message: str) -> bool:
         """Sends a message SMS to a phone number.
+
         :param int phone_number: Destination phone number.
         :param str message: Message to send to the phone number.
-
         """
         if not hasattr(phone_number, "to_bytes"):
             raise TypeError("Phone number must be integer")
@@ -474,10 +500,10 @@ class FONA:
             return False
         return True
 
-    def num_sms(self, sim_storage=True):
+    def num_sms(self, sim_storage: bool = True) -> int:
         """Returns the number of SMS messages stored in memory.
-        :param bool sim_storage: SMS storage on the SIM, otherwise internal storage on FONA chip.
 
+        :param bool sim_storage: SMS storage on the SIM, otherwise internal storage on FONA chip.
         """
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
             raise RuntimeError("Operating mode not supported by FONA module.")
@@ -500,10 +526,10 @@ class FONA:
             return self._buf
         return 0
 
-    def delete_sms(self, sms_slot):
+    def delete_sms(self, sms_slot: int) -> bool:
         """Deletes a SMS message from a storage (internal or sim) slot
-        :param int sms_slot: SMS SIM or FONA memory slot number.
 
+        :param int sms_slot: SMS SIM or FONA memory slot number.
         """
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
             return False
@@ -515,7 +541,7 @@ class FONA:
 
         return True
 
-    def delete_all_sms(self):
+    def delete_all_sms(self) -> bool:
         """Deletes all SMS messages on the FONA SIM."""
         self._read_line()
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
@@ -533,11 +559,11 @@ class FONA:
                 return False
         return True
 
-    def read_sms(self, sms_slot):
+    def read_sms(self, sms_slot: int) -> Tuple[str, str]:
         """Reads and parses SMS messages from FONA device. Returns the SMS
         sender's phone number and the message contents as a tuple.
-        :param int sms_slot: SMS SIM or FONA memory slot number.
 
+        :param int sms_slot: SMS SIM or FONA memory slot number.
         """
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
             return False
@@ -569,10 +595,10 @@ class FONA:
 
     ### Socket API (TCP, UDP) ###
 
-    def get_host_by_name(self, hostname):
+    def get_host_by_name(self, hostname: str) -> Union[str, Literal[False]]:
         """Converts a hostname to a packed 4-byte IP address.
-        :param str hostname: Destination server.
 
+        :param str hostname: Destination server.
         """
         self._read_line()
         if self._debug:
@@ -590,7 +616,7 @@ class FONA:
             self._read_line()
         return self._buf
 
-    def get_socket(self):
+    def get_socket(self) -> int:
         """Obtains a socket, if available."""
         if self._debug:
             print("*** Get socket")
@@ -613,10 +639,10 @@ class FONA:
             print("Allocated socket #%d" % allocated_socket)
         return allocated_socket
 
-    def remote_ip(self, sock_num):
+    def remote_ip(self, sock_num: int) -> str:
         """Returns the IP address of the remote server.
-        :param int sock_num: Desired socket.
 
+        :param int sock_num: Desired socket.
         """
         assert (
             sock_num < FONA_MAX_SOCKETS
@@ -628,10 +654,10 @@ class FONA:
         self._parse_reply(b"+CIPSTATUS:", idx=3)
         return self._buf
 
-    def socket_status(self, sock_num):
+    def socket_status(self, sock_num: int) -> bool:
         """Returns the socket connection status, False if not connected.
-        :param int sock_num: Desired socket number.
 
+        :param int sock_num: Desired socket number.
         """
         assert (
             sock_num < FONA_MAX_SOCKETS
@@ -658,10 +684,10 @@ class FONA:
 
         return True
 
-    def socket_available(self, sock_num):
+    def socket_available(self, sock_num: int) -> int:
         """Returns the amount of bytes available to be read from the socket.
-        :param int sock_num: Desired socket to return bytes available from.
 
+        :param int sock_num: Desired socket to return bytes available from.
         """
         assert (
             sock_num < FONA_MAX_SOCKETS
@@ -681,14 +707,16 @@ class FONA:
 
         return data
 
-    def socket_connect(self, sock_num, dest, port, conn_mode=TCP_MODE):
+    def socket_connect(
+        self, sock_num: int, dest: str, port: int, conn_mode: int = TCP_MODE
+    ) -> bool:
         """Connects to a destination IP address or hostname.
         By default, we use conn_mode TCP_MODE but we may also use UDP_MODE.
+
         :param int sock_num: Desired socket number
         :param str dest: Destination dest address.
         :param int port: Destination dest port.
         :param int conn_mode: Connection mode (TCP/UDP)
-
         """
         if self._debug:
             print(
@@ -722,10 +750,10 @@ class FONA:
             return False
         return True
 
-    def socket_close(self, sock_num):
+    def socket_close(self, sock_num: int) -> bool:
         """Close TCP or UDP connection
-        :param int sock_num: Desired socket number.
 
+        :param int sock_num: Desired socket number.
         """
         if self._debug:
             print("*** Closing socket #%d" % sock_num)
@@ -745,12 +773,12 @@ class FONA:
                 return False
         return True
 
-    def socket_read(self, sock_num, length):
+    def socket_read(self, sock_num: int, length: int) -> bytearray:
         """Read data from the network into a buffer.
-        Returns buffer and amount of bytes read.
+        Returns bytes read.
+
         :param int sock_num: Desired socket to read from.
         :param int length: Desired length to read.
-
         """
         self._read_line()
         assert (
@@ -769,12 +797,12 @@ class FONA:
 
         return self._uart.read(length)
 
-    def socket_write(self, sock_num, buffer, timeout=3000):
+    def socket_write(self, sock_num: int, buffer: bytes, timeout: int = 3000) -> bool:
         """Writes bytes to the socket.
+
         :param int sock_num: Desired socket number to write to.
         :param bytes buffer: Bytes to write to socket.
         :param int timeout: Socket write timeout, in milliseconds.
-
         """
         self._read_line()
         assert (
@@ -801,22 +829,24 @@ class FONA:
 
     ### UART Reply/Response Helpers ###
 
-    def _uart_write(self, buffer):
+    def _uart_write(self, buffer: bytes) -> None:
         """UART ``write`` with optional debug that prints
         the buffer before sending.
-        :param bytes buffer: Buffer of bytes to send to the bus.
 
+        :param bytes buffer: Buffer of bytes to send to the bus.
         """
         if self._debug:
             print("\tUARTWRITE ::", buffer.decode())
         self._uart.write(buffer)
 
-    def _send_parse_reply(self, send_data, reply_data, divider=",", idx=0):
+    def _send_parse_reply(
+        self, send_data: bytes, reply_data: bytes, divider: str = ",", idx: int = 0
+    ) -> bool:
         """Sends data to FONA module, parses reply data returned.
+
         :param bytes send_data: Data to send to the module.
         :param bytes send_data: Data received by the FONA module.
         :param str divider: Separator
-
         """
         self._read_line()
         self._get_reply(send_data)
@@ -826,12 +856,18 @@ class FONA:
         return True
 
     def _get_reply(
-        self, data=None, prefix=None, suffix=None, timeout=FONA_DEFAULT_TIMEOUT_MS
-    ):
+        self,
+        data: Optional[bytes] = None,
+        prefix: Optional[bytes] = None,
+        suffix: Optional[bytes] = None,
+        timeout: int = FONA_DEFAULT_TIMEOUT_MS,
+    ) -> Tuple[int, bytes]:
         """Send data to FONA, read response into buffer.
-        :param bytes data: Data to send to FONA module.
-        :param int timeout: Time to wait for UART response.
 
+        :param bytes data: Data to send to FONA module.
+        :param bytes prefix: Data to write if ``data`` is not provided
+        :param bytes suffix: Data to write following ``prefix`` if ``data is not provided
+        :param int timeout: Time to wait for UART response.
         """
         self._uart.reset_input_buffer()
 
@@ -842,11 +878,11 @@ class FONA:
 
         return self._read_line(timeout)
 
-    def _parse_reply(self, reply, divider=",", idx=0):
+    def _parse_reply(self, reply: bytes, divider: str = ",", idx: int = 0) -> bool:
         """Attempts to find reply in UART buffer, reads up to divider.
+
         :param bytes reply: Expected response from FONA module.
         :param str divider: Divider character.
-
         """
         parsed_reply = self._buf.find(reply)
         if parsed_reply == -1:
@@ -866,12 +902,14 @@ class FONA:
 
         return True
 
-    def _read_line(self, timeout=FONA_DEFAULT_TIMEOUT_MS, multiline=False):
+    def _read_line(
+        self, timeout: int = FONA_DEFAULT_TIMEOUT_MS, multiline: bool = False
+    ) -> Tuple[int, bytes]:
         """Reads one or multiple lines into the buffer. Optionally prints the buffer
         after reading.
+
         :param int timeout: Time to wait for UART serial to reply, in seconds.
         :param bool multiline: Read multiple lines.
-
         """
         self._buf = b""
         reply_idx = 0
@@ -904,16 +942,19 @@ class FONA:
 
     def _send_check_reply(
         self,
-        send=None,
-        prefix=None,
-        suffix=None,
-        reply=None,
+        send: Optional[bytes] = None,
+        prefix: Optional[bytes] = None,
+        suffix: Optional[bytes] = None,
+        reply: Optional[bytes] = None,
         timeout=FONA_DEFAULT_TIMEOUT_MS,
-    ):
+    ) -> bool:
         """Sends data to FONA, validates response.
-        :param bytes send: Command.
-        :param bytes reply: Expected response from module.
 
+        :param bytes send: Command.
+        :param bytes prefix: Data to send if ``send`` not provided
+        :param bytes suffix: Data to send after ``prefix`` if ``send`` not provided
+        :param bytes reply: Expected response from module.
+        :param int timeout: Time to wait for UART serial to reply, in seconds.
         """
         self._read_line()
         if send is None:
@@ -929,14 +970,18 @@ class FONA:
         return True
 
     def _send_check_reply_quoted(
-        self, prefix, suffix, reply, timeout=FONA_DEFAULT_TIMEOUT_MS
-    ):
+        self,
+        prefix: bytes,
+        suffix: bytes,
+        reply: bytes,
+        timeout: int = FONA_DEFAULT_TIMEOUT_MS,
+    ) -> bool:
         """Send prefix, ", suffix, ", and a newline. Verify response against reply.
+
         :param bytes prefix: Command prefix.
         :param bytes prefix: Command ", suffix, ".
         :param bytes reply: Expected response from module.
         :param int timeout: Time to expect reply back from FONA, in milliseconds.
-
         """
         self._buf = b""
 
@@ -946,13 +991,15 @@ class FONA:
             return False
         return True
 
-    def _get_reply_quoted(self, prefix, suffix, timeout):
+    def _get_reply_quoted(
+        self, prefix: bytes, suffix: bytes, timeout: int
+    ) -> Tuple[int, bytes]:
         """Send prefix, ", suffix, ", and newline.
         Returns: Response (and also fills buffer with response).
+
         :param bytes prefix: Command prefix.
         :param bytes prefix: Command ", suffix, ".
         :param int timeout: Time to expect reply back from FONA, in milliseconds.
-
         """
         self._uart.reset_input_buffer()
 
@@ -960,10 +1007,11 @@ class FONA:
 
         return self._read_line(timeout)
 
-    def _expect_reply(self, reply, timeout=10000):
+    def _expect_reply(self, reply: bytes, timeout: int = 10000) -> bool:
         """Reads line from FONA module and compares to reply from FONA module.
-        :param bytes reply: Expected reply from module.
 
+        :param bytes reply: Expected reply from module.
+        :param int timeout: Time to wait for UART serial to reply, in seconds.
         """
         self._read_line(timeout)
         if reply not in self._buf:
