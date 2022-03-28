@@ -4,8 +4,7 @@
 # SPDX-License-Identifier: MIT
 
 """
-:py:class:`~adafruit_fona.fona_3g.FONA3G`
-`adafruit_fona_3g`
+`fona_3g`
 ================================================================================
 
 FONA3G cellular module instance.
@@ -40,9 +39,9 @@ FONA_MAX_SOCKETS = const(10)
 class FONA3G(FONA):
     """FONA 3G module interface.
 
-    :param ~busio.uart uart: FONA UART connection.
-    :param ~DigitalInOut rst: FONA RST pin.
-    :param ~DigitalInOut ri: Optional FONA Ring Interrupt (RI) pin.
+    :param ~busio.UART uart: FONA UART connection.
+    :param ~digitalio.DigitalInOut rst: FONA RST pin.
+    :param ~digitalio.DigitalInOut ri: Optional FONA Ring Interrupt (RI) pin.
     :param bool debug: Enable debugging output.
     """
 
