@@ -9,3 +9,9 @@
 
 .. automodule:: adafruit_fona.adafruit_fona_socket
    :members:
+
+.. automodule:: adafruit_fona.adafruit_fona_network
+   :members:
+
+.. automodule:: adafruit_fona.fona_3g
+   :members:

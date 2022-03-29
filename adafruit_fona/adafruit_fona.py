@@ -64,11 +64,11 @@ FONA_SMS_STORAGE_INTERNAL = b'"ME"'  # Internal storage on the FONA
 # pylint: disable=too-many-instance-attributes, too-many-public-methods
 class FONA:
     """CircuitPython FONA module interface.
-    :param ~busio.uart UART: FONA UART connection.
-    :param ~digialio RST: FONA RST pin.
-    :param ~digialio RI: Optional FONA Ring Interrupt (RI) pin.
-    :param bool debug: Enable debugging output.
 
+    :param ~busio.UART uart: FONA UART connection.
+    :param ~digitalio.DigitalInOut rdt: FONA RST pin.
+    :param ~digitalio.DigitalInOut ri: Optional FONA Ring Interrupt (RI) pin.
+    :param bool debug: Enable debugging output.
     """
 
     TCP_MODE = const(0)  # TCP socket
@@ -442,9 +442,8 @@ class FONA:
         """Checks for a message notification from the FONA module,
         replies back with the a tuple containing (sender, message).
 
-        NOTE: This method needs to be polled consistently due to the lack
-        of hw-based interrupts in CircuitPython.
-
+        :note: This method needs to be polled consistently due to the lack
+               of hw-based interrupts in CircuitPython.
         """
         if self._ri is not None:  # poll the RI pin
             if self._ri.value:

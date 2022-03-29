@@ -28,17 +28,16 @@ NET_CDMA = 0x02
 
 
 class CELLULAR:
-    """Interface for connecting to and interacting with GSM and CDMA cellular networks."""
+    """Interface for connecting to and interacting with GSM and CDMA cellular networks.
+
+    :param FONA fona: The Adafruit FONA module we are using.
+    :param tuple apn: Tuple containing APN name, (optional) APN username,
+                        and APN password.
+    """
 
     def __init__(
         self, fona: FONA, apn: Tuple[str, Optional[str], Optional[str]]
     ) -> None:
-        """Initializes interface with cellular network.
-
-        :param FONA fona: The Adafruit FONA module we are using.
-        :param tuple apn: Tuple containing APN name, (optional) APN username,
-                            and APN password.
-        """
         self._iface = fona
         self._apn = apn
         self._network_connected = False
