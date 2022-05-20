@@ -27,6 +27,7 @@ try:
     from typing import Optional, Tuple, Union
     from busio import UART
     from digitalio import DigitalInOut
+
     try:
         from typing import Literal
     except ImportError:
