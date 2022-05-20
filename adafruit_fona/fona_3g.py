@@ -24,9 +24,13 @@ from micropython import const
 from .adafruit_fona import FONA, REPLY_OK
 
 try:
-    from typing import Optional, Tuple, Union, Literal
+    from typing import Optional, Tuple, Union
     from busio import UART
     from digitalio import DigitalInOut
+    try:
+        from typing import Literal
+    except ImportError:
+        from typing_extensions import Literal
 except ImportError:
     pass
 

@@ -27,10 +27,15 @@ from micropython import const
 from simpleio import map_range
 
 try:
-    from typing import Optional, Tuple, Union, Literal
+    from typing import Optional, Tuple, Union
     from circuitpython_typing import ReadableBuffer
     from busio import UART
     from digitalio import DigitalInOut
+
+    try:
+        from typing import Literal
+    except ImportError:
+        from typing_extensions import Literal
 except ImportError:
     pass
 
