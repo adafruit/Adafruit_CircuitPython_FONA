@@ -1,7 +1,7 @@
 Introduction
 ============
 
-.. image:: https://readthedocs.org/projects/adafruit-circuitpython-fona/badge/?version=latest
+.. image:: https://readthedocs.org/projects/fona/badge/?version=latest
     :target: https://docs.circuitpython.org/projects/fona/en/latest/
     :alt: Documentation Status
 
