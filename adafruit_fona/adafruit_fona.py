@@ -84,7 +84,7 @@ class FONA:
         self,
         uart: UART,
         rst: DigitalInOut,
-        ri: Optional[DigitalInOut] = None, # pylint: disable=invalid-name
+        ri: Optional[DigitalInOut] = None,  # pylint: disable=invalid-name
         debug: bool = False,
     ) -> None:
         self._buf = b""  # shared buffer
