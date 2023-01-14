@@ -71,7 +71,7 @@ class FONA:
     """CircuitPython FONA module interface.
 
     :param ~busio.UART uart: FONA UART connection.
-    :param ~digitalio.DigitalInOut rdt: FONA RST pin.
+    :param ~digitalio.DigitalInOut rst: FONA RST pin.
     :param ~digitalio.DigitalInOut ri: Optional FONA Ring Interrupt (RI) pin.
     :param bool debug: Enable debugging output.
     """
