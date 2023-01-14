@@ -41,11 +41,18 @@ class CELLULAR:
         self._iface = fona
         self._apn = apn
         self._network_connected = False
-        self._network_type = NET_CDMA
+        self._network_type = NET_GSM
+        self._has_gps = False
 
-        if not self._iface.version == 0x4 or self._iface.version == 0x5:
-            self._network_type = NET_GSM
+        # These are numbers defined in adafruit_fona FONA versions
+        # For some reason, we can't import them from the adafruit_fona file
+
+        if self._iface.version in (0x4, 0x5):
+            self._network_type = NET_CDMA
+
+        if self._iface.version in (0x2, 0x3, 0x4, 0x5):
             self._iface.gps = True
+            self._has_gps = True
 
     def __enter__(self) -> "CELLULAR":
         return self
@@ -72,7 +79,14 @@ class CELLULAR:
     def is_attached(self) -> bool:
         """Returns if the modem is attached to the network."""
         if self._network_type == NET_GSM:
-            if self._iface.gps == 3 and self._iface.network_status == 1:
+            if (
+                self._has_gps
+                and self._iface.gps == 3
+                and self._iface.network_status == 1
+            ):
+                return True
+
+            if not self._has_gps and self._iface.network_status == 1:
                 return True
         else:  # Attach CDMA network
             if self._iface.ue_system_info == 1 and self._iface.network_status == 1:
