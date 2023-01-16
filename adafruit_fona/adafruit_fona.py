@@ -56,6 +56,7 @@ FONA_MAX_SOCKETS = const(6)
 # FONA Versions
 FONA_800_L = const(0x01)
 FONA_800_H = const(0x6)
+FONA_800_C = const(0x7)
 FONA_808_V1 = const(0x2)
 FONA_808_V2 = const(0x3)
 FONA_3G_A = const(0x4)
@@ -71,7 +72,7 @@ class FONA:
     """CircuitPython FONA module interface.
 
     :param ~busio.UART uart: FONA UART connection.
-    :param ~digitalio.DigitalInOut rdt: FONA RST pin.
+    :param ~digitalio.DigitalInOut rst: FONA RST pin.
     :param ~digitalio.DigitalInOut ri: Optional FONA Ring Interrupt (RI) pin.
     :param bool debug: Enable debugging output.
     """
@@ -147,14 +148,20 @@ class FONA:
             self._fona_type = FONA_3G_A
         elif self._buf.find(b"SIMCOM_SIM5320E") != -1:
             self._fona_type = FONA_3G_E
-
-        if self._fona_type == FONA_800_L:
-            # determine if SIM800H
+        elif self._buf.find(b"SIM800") != -1:
             self._uart_write(b"AT+GMM\r\n")
             self._read_line(multiline=True)
 
             if self._buf.find(b"SIM800H") != -1:
                 self._fona_type = FONA_800_H
+            elif self._buf.find(b"SIM800L") != -1:
+                self._fona_type = FONA_800_L
+            elif self._buf.find(b"SIM800C") != -1:
+                self._fona_type = FONA_800_C
+
+        if self._debug and self._fona_type == 0:
+            print(f"Unsupported module: {self._buf}")
+
         return True
 
     def factory_reset(self) -> bool:
@@ -366,7 +373,7 @@ class FONA:
             # Instead just look for a fix and if found assume it's a 3D fix.
             self._get_reply(b"AT+CGNSINF")
 
-            if not b"+CGNSINF: " in self._buf:
+            if b"+CGNSINF: " not in self._buf:
                 return False
 
             status = int(self._buf[10:11].decode("utf-8"))
