@@ -231,7 +231,7 @@ class socket:
         :param int value: Socket read timeout, in seconds.
         """
         if value < 0:
-            raise Exception("Timeout period should be non-negative.")
+            raise ValueError("Timeout period should be non-negative.")
         self._timeout = value
 
     def gettimeout(self) -> int:
