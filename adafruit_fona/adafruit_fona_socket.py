@@ -55,6 +55,7 @@ NO_SOCKET_AVAIL = const(255)
 # keep track of sockets we allocate
 SOCKETS = []
 
+
 # pylint: disable=too-many-arguments, unused-argument
 def getaddrinfo(host, port: int, family=0, socktype=0, proto=0, flags=0):
     """Translate the host/port argument into a sequence of 5-tuples that
