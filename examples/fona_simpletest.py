@@ -6,11 +6,12 @@ import time
 import board
 import busio
 import digitalio
-import adafruit_requests as requests
+import adafruit_connection_manager
+import adafruit_requests
 from adafruit_fona.adafruit_fona import FONA
 from adafruit_fona.fona_3g import FONA3G
 import adafruit_fona.adafruit_fona_network as network
-import adafruit_fona.adafruit_fona_socket as cellular_socket
+import adafruit_fona.adafruit_fona_socket as pool
 
 print("FONA Webclient Test")
 
@@ -53,8 +54,9 @@ print("Network Connected!")
 print("My IP address is:", fona.local_ip)
 print("IP lookup adafruit.com: %s" % fona.get_host_by_name("adafruit.com"))
 
-# Initialize a requests object with a socket and cellular interface
-requests.set_socket(cellular_socket, fona)
+# create requests session
+ssl_context = adafruit_connection_manager.create_fake_ssl_context(pool, fona)
+requests = adafruit_requests.Session(pool, ssl_context)
 
 # fona._debug = True
 print("Fetching text from", TEXT_URL)

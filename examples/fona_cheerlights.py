@@ -7,12 +7,13 @@ import board
 import busio
 import digitalio
 import neopixel
-import adafruit_requests as requests
+import adafruit_connection_manager
+import adafruit_requests
 import adafruit_fancyled.adafruit_fancyled as fancy
 from adafruit_fona.adafruit_fona import FONA
 from adafruit_fona.fona_3g import FONA3G
 import adafruit_fona.adafruit_fona_network as network
-import adafruit_fona.adafruit_fona_socket as cellular_socket
+import adafruit_fona.adafruit_fona_socket as pool
 
 # Get GPRS details and more from a secrets.py file
 try:
@@ -47,8 +48,9 @@ while not network.is_connected:
     time.sleep(0.5)
 print("Network Connected!")
 
-# Initialize a requests object with a socket and cellular interface
-requests.set_socket(cellular_socket, fona)
+# create requests session
+ssl_context = adafruit_connection_manager.create_fake_ssl_context(pool, fona)
+requests = adafruit_requests.Session(pool, ssl_context)
 
 DATA_SOURCE = "http://api.thingspeak.com/channels/1417/feeds.json?results=1"
 DATA_LOCATION = ["feeds", 0, "field2"]
