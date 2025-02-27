@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 # pylint: disable=unused-import
+from os import getenv
 import time
 import board
 import busio
@@ -13,12 +14,13 @@ from adafruit_fona.fona_3g import FONA3G
 import adafruit_fona.adafruit_fona_network as network
 import adafruit_fona.adafruit_fona_socket as pool
 
-# Get GPRS details and more from a secrets.py file
-try:
-    from secrets import secrets
-except ImportError:
-    print("GPRS secrets are kept in secrets.py, please add them there!")
-    raise
+# Get FONA details and Adafruit IO keys, ensure these are setup in settings.toml
+# (visit io.adafruit.com if you need to create an account, or if you need your Adafruit IO key.)
+apn = getenv("apn")
+apn_username = getenv("apn_username")
+apn_password = getenv("apn_password")
+aio_username = getenv("ADAFRUIT_AIO_USERNAME")
+aio_key = getenv("ADAFRUIT_AIO_KEY")
 
 # Create a serial connection for the FONA
 uart = busio.UART(board.TX, board.RX)
@@ -31,9 +33,7 @@ fona = FONA(uart, rst)
 # fona = FONA3G(uart, rst)
 
 # Initialize cellular data network
-network = network.CELLULAR(
-    fona, (secrets["apn"], secrets["apn_username"], secrets["apn_password"])
-)
+network = network.CELLULAR(fona, (apn, apn_username, apn_password))
 
 while not network.is_attached:
     print("Attaching to network...")
@@ -58,13 +58,9 @@ while True:
     feed = "test"
     payload = {"value": data}
     response = requests.post(
-        "http://io.adafruit.com/api/v2/"
-        + secrets["aio_username"]
-        + "/feeds/"
-        + feed
-        + "/data",
+        "http://io.adafruit.com/api/v2/" + aio_username + "/feeds/" + feed + "/data",
         json=payload,
-        headers={"X-AIO-KEY": secrets["aio_key"]},
+        headers={"X-AIO-KEY": aio_key},
     )
     print(response.json())
     response.close()
