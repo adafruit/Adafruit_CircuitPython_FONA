@@ -1,20 +1,21 @@
 # SPDX-FileCopyrightText: 2021 ladyada for Adafruit Industries
 # SPDX-License-Identifier: MIT
 
-# pylint: disable=unused-import
-from os import getenv
 import time
+from os import getenv
+
+import adafruit_connection_manager
+import adafruit_fancyled.adafruit_fancyled as fancy
+import adafruit_requests
 import board
 import busio
 import digitalio
 import neopixel
-import adafruit_connection_manager
-import adafruit_requests
-import adafruit_fancyled.adafruit_fancyled as fancy
-from adafruit_fona.adafruit_fona import FONA
-from adafruit_fona.fona_3g import FONA3G
+
 import adafruit_fona.adafruit_fona_network as network
 import adafruit_fona.adafruit_fona_socket as pool
+from adafruit_fona.adafruit_fona import FONA
+from adafruit_fona.fona_3g import FONA3G
 
 # Get FONA details, ensure these are setup in settings.toml
 apn = getenv("apn")

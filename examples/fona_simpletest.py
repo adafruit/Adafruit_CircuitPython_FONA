@@ -1,18 +1,19 @@
 # SPDX-FileCopyrightText: 2021 ladyada for Adafruit Industries
 # SPDX-License-Identifier: MIT
 
-# pylint: disable=unused-import
-from os import getenv
 import time
+from os import getenv
+
+import adafruit_connection_manager
+import adafruit_requests
 import board
 import busio
 import digitalio
-import adafruit_connection_manager
-import adafruit_requests
-from adafruit_fona.adafruit_fona import FONA
-from adafruit_fona.fona_3g import FONA3G
+
 import adafruit_fona.adafruit_fona_network as network
 import adafruit_fona.adafruit_fona_socket as pool
+from adafruit_fona.adafruit_fona import FONA
+from adafruit_fona.fona_3g import FONA3G
 
 print("FONA Webclient Test")
 

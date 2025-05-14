@@ -1,11 +1,12 @@
 # SPDX-FileCopyrightText: 2021 ladyada for Adafruit Industries
 # SPDX-License-Identifier: MIT
 
-# pylint: disable=unused-import
 import time
+
 import board
 import busio
 import digitalio
+
 from adafruit_fona.adafruit_fona import FONA, FONA_3G_A, FONA_3G_E
 from adafruit_fona.fona_3g import FONA3G
 
@@ -39,7 +40,7 @@ num_sms = fona.num_sms()
 print("%d SMS's on SIM Card" % num_sms)
 
 # FONA3G SMS memory slots start at 0
-if fona.version in (FONA_3G_A, FONA_3G_E):
+if fona.version in {FONA_3G_A, FONA_3G_E}:
     sms_idx = 0
 else:  # FONA800 and FONA808 SMS slots start at 1
     sms_idx = 1

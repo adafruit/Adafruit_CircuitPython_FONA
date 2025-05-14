@@ -1,11 +1,12 @@
 # SPDX-FileCopyrightText: 2021 ladyada for Adafruit Industries
 # SPDX-License-Identifier: MIT
 
-# pylint: disable=unused-import
 import time
+
 import board
 import busio
 import digitalio
+
 from adafruit_fona.adafruit_fona import FONA
 from adafruit_fona.fona_3g import FONA3G
 
@@ -38,7 +39,7 @@ while True:
     sender, message = fona.receive_sms()
 
     if message:
-        print("Incoming SMS from {}: {}".format(sender, message))
+        print(f"Incoming SMS from {sender}: {message}")
 
         # Reply back!
         print("Sending response...")
