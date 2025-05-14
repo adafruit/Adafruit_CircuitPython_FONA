@@ -12,22 +12,25 @@ A socket compatible interface with the Adafruit FONA cellular module.
 * Author(s): ladyada, Brent Rubell
 
 """
+
 import gc
 import time
+
 from micropython import const
 
 try:
-    from typing import Optional, Tuple, Sequence
+    from typing import Optional, Sequence, Tuple
+
     from adafruit_fona.adafruit_fona import FONA
 except ImportError:
     pass
 
-_the_interface = None  # pylint: disable=invalid-name
+_the_interface = None
 
 
 def set_interface(iface: FONA) -> None:
     """Helper to set the global internet interface."""
-    global _the_interface  # pylint: disable=global-statement, invalid-name
+    global _the_interface
     _the_interface = iface
 
 
@@ -56,7 +59,6 @@ NO_SOCKET_AVAIL = const(255)
 SOCKETS = []
 
 
-# pylint: disable=too-many-arguments, unused-argument
 def getaddrinfo(host, port: int, family=0, socktype=0, proto=0, flags=0):
     """Translate the host/port argument into a sequence of 5-tuples that
     contain all the necessary arguments for creating a socket connected to that service.
@@ -76,7 +78,6 @@ def gethostbyname(hostname: str) -> str:
     return addr.strip('"')
 
 
-# pylint: disable=invalid-name, redefined-builtin
 class socket:
     """A simplified implementation of the Python 'socket' class
     for connecting to a FONA cellular module.
@@ -130,23 +131,17 @@ class socket:
         self._buffer = bytearray(self._buffer)
         return self._buffer
 
-    def connect(
-        self, address: Tuple[str, int], conn_mode: Optional[int] = None
-    ) -> None:
+    def connect(self, address: Tuple[str, int], conn_mode: Optional[int] = None) -> None:
         """Connect to a remote socket at address. (The format of address depends
         on the address family — see above.)
 
         :param tuple address: Remote socket as a (host, port) tuple.
         :param int conn_mode: Connection mode (TCP/UDP)
         """
-        assert (
-            conn_mode != 0x03
-        ), "Error: SSL/TLS is not currently supported by CircuitPython."
+        assert conn_mode != 0x03, "Error: SSL/TLS is not currently supported by CircuitPython."
         host, port = address
 
-        if not _the_interface.socket_connect(
-            self.socknum, host, port, conn_mode=self._sock_type
-        ):
+        if not _the_interface.socket_connect(self.socknum, host, port, conn_mode=self._sock_type):
             raise RuntimeError("Failed to connect to host", host)
         self._buffer = b""
 

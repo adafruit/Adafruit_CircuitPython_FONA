@@ -20,11 +20,14 @@ Implementation Notes
   https://github.com/adafruit/circuitpython/releases
 
 """
+
 from micropython import const
+
 from .adafruit_fona import FONA, REPLY_OK
 
 try:
     from typing import Optional, Tuple, Union
+
     from busio import UART
     from digitalio import DigitalInOut
 
@@ -62,9 +65,7 @@ class FONA3G(FONA):
 
     def set_baudrate(self, baudrate: int) -> bool:
         """Sets the FONA's UART baudrate."""
-        if not self._send_check_reply(
-            b"AT+IPREX=" + str(baudrate).encode(), reply=REPLY_OK
-        ):
+        if not self._send_check_reply(b"AT+IPREX=" + str(baudrate).encode(), reply=REPLY_OK):
             return False
         return True
 
@@ -108,7 +109,6 @@ class FONA3G(FONA):
             return None
         return self._buf
 
-    # pylint: disable=too-many-return-statements
     def set_gprs(
         self,
         apn: Optional[Tuple[str, Optional[str], Optional[str]]] = None,
@@ -153,12 +153,8 @@ class FONA3G(FONA):
 
             if not self.local_ip:
                 return True
-        else:
-            # reset PDP state
-            if not self._send_check_reply(
-                b"AT+NETCLOSE", reply=b"Network closed", timeout=20000
-            ):
-                return False
+        elif not self._send_check_reply(b"AT+NETCLOSE", reply=b"Network closed", timeout=20000):
+            return False
         return True
 
     ### Socket API (TCP, UDP) ###
@@ -174,9 +170,7 @@ class FONA3G(FONA):
     @tx_timeout.setter
     def tx_timeout(self, timeout: int) -> bool:
         self._read_line()
-        if not self._send_check_reply(
-            b"AT+CIPTIMEOUT=" + str(timeout).encode(), reply=REPLY_OK
-        ):
+        if not self._send_check_reply(b"AT+CIPTIMEOUT=" + str(timeout).encode(), reply=REPLY_OK):
             return False
         return True
 
@@ -221,9 +215,7 @@ class FONA3G(FONA):
             print("Allocated socket #%d" % socket)
         return socket
 
-    def socket_connect(
-        self, sock_num: int, dest: str, port: int, conn_mode: int = 0
-    ) -> bool:
+    def socket_connect(self, sock_num: int, dest: str, port: int, conn_mode: int = 0) -> bool:
         """Connects to a destination IP address or hostname.
         By default, we use conn_mode TCP_MODE but we may also use UDP_MODE.
 
@@ -233,21 +225,13 @@ class FONA3G(FONA):
         :param int conn_mode: Connection mode (TCP/UDP)
         """
         if self._debug:
-            print(
-                "*** Socket connect, protocol={}, port={}, ip={}".format(
-                    conn_mode, port, dest
-                )
-            )
+            print(f"*** Socket connect, protocol={conn_mode}, port={port}, ip={dest}")
 
         self._uart.reset_input_buffer()
-        assert (
-            sock_num < FONA_MAX_SOCKETS
-        ), "Provided socket exceeds the maximum number of \
+        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
         self._send_check_reply(b"AT+CIPHEAD=0", reply=REPLY_OK)  # do not show ip header
-        self._send_check_reply(
-            b"AT+CIPSRIP=0", reply=REPLY_OK
-        )  # do not show remote ip/port
+        self._send_check_reply(b"AT+CIPSRIP=0", reply=REPLY_OK)  # do not show remote ip/port
         self._send_check_reply(b"AT+CIPRXGET=1", reply=REPLY_OK)  # manually get data
 
         self._uart_write(b"AT+CIPOPEN=" + str(sock_num).encode())
@@ -267,9 +251,7 @@ class FONA3G(FONA):
         :param int sock_num: Desired socket number
         """
         self._read_line()
-        assert (
-            sock_num < FONA_MAX_SOCKETS
-        ), "Provided socket exceeds the maximum number of \
+        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
 
         self._uart_write(b"AT+CIPOPEN?\r\n")
@@ -290,19 +272,13 @@ class FONA3G(FONA):
         :param int timeout: Socket write timeout, in milliseconds. Defaults to 120000ms.
         """
         self._read_line()
-        assert (
-            sock_num < FONA_MAX_SOCKETS
-        ), "Provided socket exceeds the maximum number of \
+        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
 
         self._uart.reset_input_buffer()
 
         self._uart_write(
-            b"AT+CIPSEND="
-            + str(sock_num).encode()
-            + b","
-            + str(len(buffer)).encode()
-            + b"\r\n"
+            b"AT+CIPSEND=" + str(sock_num).encode() + b"," + str(len(buffer)).encode() + b"\r\n"
         )
         self._read_line()
         if self._buf[0] != 62:

@@ -13,8 +13,9 @@ Interface for connecting to and interacting with GSM and CDMA cellular networks.
 """
 
 try:
-    from typing import Optional, Tuple, Type
     from types import TracebackType
+    from typing import Optional, Tuple, Type
+
     from adafruit_fona.adafruit_fona import FONA
 except ImportError:
     pass
@@ -35,9 +36,7 @@ class CELLULAR:
                         and APN password.
     """
 
-    def __init__(
-        self, fona: FONA, apn: Tuple[str, Optional[str], Optional[str]]
-    ) -> None:
+    def __init__(self, fona: FONA, apn: Tuple[str, Optional[str], Optional[str]]) -> None:
         self._iface = fona
         self._apn = apn
         self._network_connected = False
@@ -47,10 +46,10 @@ class CELLULAR:
         # These are numbers defined in adafruit_fona FONA versions
         # For some reason, we can't import them from the adafruit_fona file
 
-        if self._iface.version in (0x4, 0x5):
+        if self._iface.version in {0x4, 0x5}:
             self._network_type = NET_CDMA
 
-        if self._iface.version in (0x2, 0x3, 0x4, 0x5):
+        if self._iface.version in {0x2, 0x3, 0x4, 0x5}:
             self._iface.gps = True
             self._has_gps = True
 
@@ -79,18 +78,13 @@ class CELLULAR:
     def is_attached(self) -> bool:
         """Returns if the modem is attached to the network."""
         if self._network_type == NET_GSM:
-            if (
-                self._has_gps
-                and self._iface.gps == 3
-                and self._iface.network_status == 1
-            ):
+            if self._has_gps and self._iface.gps == 3 and self._iface.network_status == 1:
                 return True
 
             if not self._has_gps and self._iface.network_status == 1:
                 return True
-        else:  # Attach CDMA network
-            if self._iface.ue_system_info == 1 and self._iface.network_status == 1:
-                return True
+        elif self._iface.ue_system_info == 1 and self._iface.network_status == 1:
+            return True
         return False
 
     @property

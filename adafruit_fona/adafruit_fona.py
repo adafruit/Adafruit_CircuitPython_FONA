@@ -3,8 +3,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-# pylint: disable=too-many-lines
-
 """
 `adafruit_fona`
 ================================================================================
@@ -22,14 +20,17 @@ Implementation Notes
   https://github.com/adafruit/circuitpython/releases
 
 """
+
 import time
+
 from micropython import const
 from simpleio import map_range
 
 try:
     from typing import Optional, Tuple, Union
-    from circuitpython_typing import ReadableBuffer
+
     from busio import UART
+    from circuitpython_typing import ReadableBuffer
     from digitalio import DigitalInOut
 
     try:
@@ -67,7 +68,6 @@ FONA_SMS_STORAGE_SIM = b'"SM"'  # Storage on the SIM
 FONA_SMS_STORAGE_INTERNAL = b'"ME"'  # Internal storage on the FONA
 
 
-# pylint: disable=too-many-instance-attributes, too-many-public-methods
 class FONA:
     """CircuitPython FONA module interface.
 
@@ -80,12 +80,11 @@ class FONA:
     TCP_MODE = const(0)  # TCP socket
     UDP_MODE = const(1)  # UDP socket
 
-    # pylint: disable=too-many-arguments
     def __init__(
         self,
         uart: UART,
         rst: DigitalInOut,
-        ri: Optional[DigitalInOut] = None,  # pylint: disable=invalid-name
+        ri: Optional[DigitalInOut] = None,
         debug: bool = False,
     ) -> None:
         self._buf = b""  # shared buffer
@@ -100,7 +99,6 @@ class FONA:
         if not self._init_fona():
             raise RuntimeError("Unable to find FONA. Please check connections.")
 
-    # pylint: disable=too-many-branches, too-many-statements
     def _init_fona(self) -> bool:
         """Initializes FONA module."""
         self.reset()
@@ -184,7 +182,6 @@ class FONA:
         self._rst.value = True
 
     @property
-    # pylint: disable=too-many-return-statements
     def version(self) -> int:
         """The version of the FONA module. Can be FONA_800_L,
         FONA_800_H, FONA_808_V1, FONA_808_V2, FONA_3G_A, FONA3G_E.
@@ -233,7 +230,6 @@ class FONA:
             return False
         return True
 
-    # pylint: disable=too-many-return-statements
     def set_gprs(
         self,
         apn: Optional[Tuple[str, Optional[str], Optional[str]]] = None,
@@ -257,9 +253,7 @@ class FONA:
                 return False
 
             # disconnect all sockets
-            if not self._send_check_reply(
-                b"AT+CIPSHUT", reply=b"SHUT OK", timeout=20000
-            ):
+            if not self._send_check_reply(b"AT+CIPSHUT", reply=b"SHUT OK", timeout=20000):
                 return False
 
             if not self._send_check_reply(b"AT+CGATT=1", reply=REPLY_OK, timeout=10000):
@@ -305,9 +299,7 @@ class FONA:
                 return False
 
             # Open GPRS context
-            if not self._send_check_reply(
-                b"AT+SAPBR=1,1", reply=REPLY_OK, timeout=1850
-            ):
+            if not self._send_check_reply(b"AT+SAPBR=1,1", reply=REPLY_OK, timeout=1850):
                 return False
 
             # Bring up wireless connection
@@ -316,12 +308,8 @@ class FONA:
 
             if not self.local_ip:
                 return False
-        else:
-            # reset PDP state
-            if not self._send_check_reply(
-                b"AT+CIPSHUT", reply=b"SHUT OK", timeout=20000
-            ):
-                return False
+        elif not self._send_check_reply(b"AT+CIPSHUT", reply=b"SHUT OK", timeout=20000):
+            return False
 
         return True
 
@@ -381,14 +369,12 @@ class FONA:
                 status = 3  # assume 3D fix
             self._read_line()
         else:
-            raise NotImplementedError(
-                "FONA 808 v1 not currently supported by this library."
-            )
+            raise NotImplementedError("FONA 808 v1 not currently supported by this library.")
         return status
 
     @gps.setter
     def gps(self, gps_on: bool = False) -> bool:
-        if self._fona_type not in (FONA_3G_A, FONA_3G_E, FONA_808_V1, FONA_808_V2):
+        if self._fona_type not in {FONA_3G_A, FONA_3G_E, FONA_808_V1, FONA_808_V2}:
             raise TypeError("GPS unsupported for this FONA module.")
 
         # check if already enabled or disabled
@@ -406,27 +392,21 @@ class FONA:
             if self._fona_type == FONA_808_V2:  # try GNS
                 if not self._send_check_reply(b"AT+CGNSPWR=1", reply=REPLY_OK):
                     return False
-            else:
-                if not self._send_parse_reply(b"AT+CGPSPWR=1", reply_data=REPLY_OK):
-                    return False
-        else:
-            if self._fona_type == FONA_808_V2:  # try GNS
-                if not self._send_check_reply(b"AT+CGNSPWR=0", reply=REPLY_OK):
-                    return False
-                if not self._send_check_reply(b"AT+CGPSPWR=0", reply=REPLY_OK):
-                    return False
+            elif not self._send_parse_reply(b"AT+CGPSPWR=1", reply_data=REPLY_OK):
+                return False
+        elif self._fona_type == FONA_808_V2:  # try GNS
+            if not self._send_check_reply(b"AT+CGNSPWR=0", reply=REPLY_OK):
+                return False
+            if not self._send_check_reply(b"AT+CGPSPWR=0", reply=REPLY_OK):
+                return False
 
         return True
 
-    def pretty_ip(  # pylint: disable=no-self-use, invalid-name
-        self, ip: ReadableBuffer
-    ) -> str:
+    def pretty_ip(self, ip: ReadableBuffer) -> str:
         """Converts a bytearray IP address to a dotted-quad string for printing"""
         return "%d.%d.%d.%d" % (ip[0], ip[1], ip[2], ip[3])
 
-    def unpretty_ip(  # pylint: disable=no-self-use, invalid-name
-        self, ip: str
-    ) -> bytes:
+    def unpretty_ip(self, ip: str) -> bytes:
         """Converts a dotted-quad string to a bytearray IP address"""
         octets = [int(x) for x in ip.split(".")]
         return bytes(octets)
@@ -445,9 +425,8 @@ class FONA:
         if enable:
             if not self._send_check_reply(b"AT+CNMI=2,1\r\n", reply=REPLY_OK):
                 return False
-        else:
-            if not self._send_check_reply(b"AT+CNMI=2,0\r\n", reply=REPLY_OK):
-                return False
+        elif not self._send_check_reply(b"AT+CNMI=2,0\r\n", reply=REPLY_OK):
+            return False
         return True
 
     def receive_sms(self) -> Tuple[str, str]:
@@ -498,7 +477,7 @@ class FONA:
         # write out message and ^z
         self._uart_write((message + chr(26)).encode())
 
-        if self._fona_type in (FONA_3G_A, FONA_3G_E):
+        if self._fona_type in {FONA_3G_A, FONA_3G_E}:
             self._read_line(200)  # eat first 'CRLF'
             self._read_line(200)  # eat second 'CRLF'
 
@@ -522,11 +501,8 @@ class FONA:
         if sim_storage:  # ask how many SMS are stored
             if self._send_parse_reply(b"AT+CPMS?", FONA_SMS_STORAGE_SIM + b",", idx=1):
                 return self._buf
-        else:
-            if self._send_parse_reply(
-                b"AT+CPMS?", FONA_SMS_STORAGE_INTERNAL + b",", idx=1
-            ):
-                return self._buf
+        elif self._send_parse_reply(b"AT+CPMS?", FONA_SMS_STORAGE_INTERNAL + b",", idx=1):
+            return self._buf
 
         self._read_line()  # eat OK
         if self._send_parse_reply(b"AT+CPMS?", b'"SM",', idx=1):
@@ -545,9 +521,7 @@ class FONA:
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
             return False
 
-        if not self._send_check_reply(
-            b"AT+CMGD=" + str(sms_slot).encode(), reply=REPLY_OK
-        ):
+        if not self._send_check_reply(b"AT+CMGD=" + str(sms_slot).encode(), reply=REPLY_OK):
             return False
 
         return True
@@ -558,16 +532,13 @@ class FONA:
         if not self._send_check_reply(b"AT+CMGF=1", reply=REPLY_OK):
             return False
 
-        if self._fona_type in (FONA_3G_A, FONA_3G_E):
+        if self._fona_type in {FONA_3G_A, FONA_3G_E}:
             num_sms = self.num_sms()
             for slot in range(0, num_sms):
                 if not self.delete_sms(slot):
                     return False
-        else:  # DEL ALL on 808
-            if not self._send_check_reply(
-                b'AT+CMGDA="DEL ALL"', reply=REPLY_OK, timeout=25000
-            ):
-                return False
+        elif not self._send_check_reply(b'AT+CMGDA="DEL ALL"', reply=REPLY_OK, timeout=25000):
+            return False
         return True
 
     def read_sms(self, sms_slot: int) -> Tuple[str, str]:
@@ -617,9 +588,7 @@ class FONA:
         if isinstance(hostname, str):
             hostname = bytes(hostname, "utf-8")
 
-        if not self._send_check_reply(
-            b'AT+CDNSGIP="' + hostname + b'"\r\n', reply=REPLY_OK
-        ):
+        if not self._send_check_reply(b'AT+CDNSGIP="' + hostname + b'"\r\n', reply=REPLY_OK):
             return False
 
         self._read_line()
@@ -655,9 +624,7 @@ class FONA:
 
         :param int sock_num: Desired socket.
         """
-        assert (
-            sock_num < FONA_MAX_SOCKETS
-        ), "Provided socket exceeds the maximum number of \
+        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
         self._uart_write(b"AT+CIPSTATUS=" + str(sock_num).encode() + b"\r\n")
         self._read_line(100)
@@ -670,9 +637,7 @@ class FONA:
 
         :param int sock_num: Desired socket number.
         """
-        assert (
-            sock_num < FONA_MAX_SOCKETS
-        ), "Provided socket exceeds the maximum number of \
+        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
         if not self._send_check_reply(b"AT+CIPSTATUS", reply=REPLY_OK, timeout=100):
             return False
@@ -700,9 +665,7 @@ class FONA:
 
         :param int sock_num: Desired socket to return bytes available from.
         """
-        assert (
-            sock_num < FONA_MAX_SOCKETS
-        ), "Provided socket exceeds the maximum number of \
+        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
         if not self._send_parse_reply(
             b"AT+CIPRXGET=4," + str(sock_num).encode(),
@@ -711,7 +674,7 @@ class FONA:
             return False
         data = self._buf
         if self._debug:
-            print("\t {} bytes available.".format(self._buf))
+            print(f"\t {self._buf} bytes available.")
 
         self._read_line()
         self._read_line()
@@ -730,16 +693,10 @@ class FONA:
         :param int conn_mode: Connection mode (TCP/UDP)
         """
         if self._debug:
-            print(
-                "*** Socket connect, protocol={}, port={}, ip={}".format(
-                    conn_mode, port, dest
-                )
-            )
+            print(f"*** Socket connect, protocol={conn_mode}, port={port}, ip={dest}")
 
         self._uart.reset_input_buffer()
-        assert (
-            sock_num < FONA_MAX_SOCKETS
-        ), "Provided socket exceeds the maximum number of \
+        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
 
         # Query local IP Address
@@ -768,20 +725,17 @@ class FONA:
         """
         if self._debug:
             print("*** Closing socket #%d" % sock_num)
-        assert (
-            sock_num < FONA_MAX_SOCKETS
-        ), "Provided socket exceeds the maximum number of \
+        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
 
         self._uart_write(b"AT+CIPCLOSE=" + str(sock_num).encode() + b"\r\n")
         self._read_line(3000)
 
-        if self._fona_type in (FONA_3G_A, FONA_3G_E):
+        if self._fona_type in {FONA_3G_A, FONA_3G_E}:
             if not self._expect_reply(REPLY_OK):
                 return False
-        else:
-            if not self._expect_reply(b"CLOSE OK"):
-                return False
+        elif not self._expect_reply(b"CLOSE OK"):
+            return False
         return True
 
     def socket_read(self, sock_num: int, length: int) -> bytearray:
@@ -792,9 +746,7 @@ class FONA:
         :param int length: Desired length to read.
         """
         self._read_line()
-        assert (
-            sock_num < FONA_MAX_SOCKETS
-        ), "Provided socket exceeds the maximum number of \
+        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
         if self._debug:
             print("* socket read")
@@ -816,9 +768,7 @@ class FONA:
         :param int timeout: Socket write timeout, in milliseconds.
         """
         self._read_line()
-        assert (
-            sock_num < FONA_MAX_SOCKETS
-        ), "Provided socket exceeds the maximum number of \
+        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
 
         self._uart.reset_input_buffer()
@@ -971,9 +921,8 @@ class FONA:
         if send is None:
             if not self._get_reply(prefix=prefix, suffix=suffix, timeout=timeout):
                 return False
-        else:
-            if not self._get_reply(send, timeout=timeout):
-                return False
+        elif not self._get_reply(send, timeout=timeout):
+            return False
 
         if not self._buf == reply:
             return False
@@ -1002,9 +951,7 @@ class FONA:
             return False
         return True
 
-    def _get_reply_quoted(
-        self, prefix: bytes, suffix: bytes, timeout: int
-    ) -> Tuple[int, bytes]:
+    def _get_reply_quoted(self, prefix: bytes, suffix: bytes, timeout: int) -> Tuple[int, bytes]:
         """Send prefix, ", suffix, ", and newline.
         Returns: Response (and also fills buffer with response).
 
