@@ -50,7 +50,7 @@ while not network.is_connected:
 print("Network Connected!")
 
 print("My IP address is:", fona.local_ip)
-print("IP lookup adafruit.com: %s" % fona.get_host_by_name("adafruit.com"))
+print(f"IP lookup adafruit.com: {fona.get_host_by_name('adafruit.com')}")
 
 # create requests session
 ssl_context = adafruit_connection_manager.create_fake_ssl_context(pool, fona)

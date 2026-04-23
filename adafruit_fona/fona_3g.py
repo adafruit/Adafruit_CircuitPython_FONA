@@ -212,7 +212,7 @@ class FONA3G(FONA):
             self._read_line()  # eat the rest of '+CIPOPEN' responses
 
         if self._debug:
-            print("Allocated socket #%d" % socket)
+            print(f"Allocated socket #{socket}")
         return socket
 
     def socket_connect(self, sock_num: int, dest: str, port: int, conn_mode: int = 0) -> bool:
@@ -228,8 +228,10 @@ class FONA3G(FONA):
             print(f"*** Socket connect, protocol={conn_mode}, port={port}, ip={dest}")
 
         self._uart.reset_input_buffer()
-        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
+        assert sock_num < FONA_MAX_SOCKETS, (
+            "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
+        )
         self._send_check_reply(b"AT+CIPHEAD=0", reply=REPLY_OK)  # do not show ip header
         self._send_check_reply(b"AT+CIPSRIP=0", reply=REPLY_OK)  # do not show remote ip/port
         self._send_check_reply(b"AT+CIPRXGET=1", reply=REPLY_OK)  # manually get data
@@ -251,8 +253,10 @@ class FONA3G(FONA):
         :param int sock_num: Desired socket number
         """
         self._read_line()
-        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
+        assert sock_num < FONA_MAX_SOCKETS, (
+            "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
+        )
 
         self._uart_write(b"AT+CIPOPEN?\r\n")
         for _ in range(0, sock_num + 1):
@@ -272,8 +276,10 @@ class FONA3G(FONA):
         :param int timeout: Socket write timeout, in milliseconds. Defaults to 120000ms.
         """
         self._read_line()
-        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
+        assert sock_num < FONA_MAX_SOCKETS, (
+            "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
+        )
 
         self._uart.reset_input_buffer()
 

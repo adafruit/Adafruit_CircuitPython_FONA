@@ -404,7 +404,7 @@ class FONA:
 
     def pretty_ip(self, ip: ReadableBuffer) -> str:
         """Converts a bytearray IP address to a dotted-quad string for printing"""
-        return "%d.%d.%d.%d" % (ip[0], ip[1], ip[2], ip[3])
+        return f"{ip[0]}.{ip[1]}.{ip[2]}.{ip[3]}"
 
     def unpretty_ip(self, ip: str) -> bytes:
         """Converts a dotted-quad string to a bytearray IP address"""
@@ -616,7 +616,7 @@ class FONA:
         for _ in range(allocated_socket, FONA_MAX_SOCKETS):
             self._read_line(100)
         if self._debug:
-            print("Allocated socket #%d" % allocated_socket)
+            print(f"Allocated socket #{allocated_socket}")
         return allocated_socket
 
     def remote_ip(self, sock_num: int) -> str:
@@ -624,8 +624,10 @@ class FONA:
 
         :param int sock_num: Desired socket.
         """
-        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
+        assert sock_num < FONA_MAX_SOCKETS, (
+            "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
+        )
         self._uart_write(b"AT+CIPSTATUS=" + str(sock_num).encode() + b"\r\n")
         self._read_line(100)
 
@@ -637,8 +639,10 @@ class FONA:
 
         :param int sock_num: Desired socket number.
         """
-        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
+        assert sock_num < FONA_MAX_SOCKETS, (
+            "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
+        )
         if not self._send_check_reply(b"AT+CIPSTATUS", reply=REPLY_OK, timeout=100):
             return False
         self._read_line()
@@ -665,8 +669,10 @@ class FONA:
 
         :param int sock_num: Desired socket to return bytes available from.
         """
-        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
+        assert sock_num < FONA_MAX_SOCKETS, (
+            "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
+        )
         if not self._send_parse_reply(
             b"AT+CIPRXGET=4," + str(sock_num).encode(),
             b"+CIPRXGET: 4," + str(sock_num).encode() + b",",
@@ -696,8 +702,10 @@ class FONA:
             print(f"*** Socket connect, protocol={conn_mode}, port={port}, ip={dest}")
 
         self._uart.reset_input_buffer()
-        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
+        assert sock_num < FONA_MAX_SOCKETS, (
+            "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
+        )
 
         # Query local IP Address
         self._uart_write(b"AT+CIFSR\r\n")
@@ -724,9 +732,11 @@ class FONA:
         :param int sock_num: Desired socket number.
         """
         if self._debug:
-            print("*** Closing socket #%d" % sock_num)
-        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
+            print(f"*** Closing socket #{sock_num}")
+        assert sock_num < FONA_MAX_SOCKETS, (
+            "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
+        )
 
         self._uart_write(b"AT+CIPCLOSE=" + str(sock_num).encode() + b"\r\n")
         self._read_line(3000)
@@ -746,8 +756,10 @@ class FONA:
         :param int length: Desired length to read.
         """
         self._read_line()
-        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
+        assert sock_num < FONA_MAX_SOCKETS, (
+            "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
+        )
         if self._debug:
             print("* socket read")
 
@@ -768,8 +780,10 @@ class FONA:
         :param int timeout: Socket write timeout, in milliseconds.
         """
         self._read_line()
-        assert sock_num < FONA_MAX_SOCKETS, "Provided socket exceeds the maximum number of \
+        assert sock_num < FONA_MAX_SOCKETS, (
+            "Provided socket exceeds the maximum number of \
                                              sockets for the FONA module."
+        )
 
         self._uart.reset_input_buffer()
         self._uart_write(b"AT+CIPSEND=" + str(sock_num).encode())

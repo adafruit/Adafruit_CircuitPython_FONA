@@ -29,7 +29,7 @@ while fona.network_status != 1:
     print("Connecting to network...")
     time.sleep(1)
 print("Connected to network!")
-print("RSSI: %ddB" % fona.rssi)
+print(f"RSSI: {fona.rssi}dB")
 
 # Enable FONA SMS notification
 fona.enable_sms_notification = True

@@ -27,7 +27,7 @@ while fona.network_status != 1:
     print("Connecting to network...")
     time.sleep(1)
 print("Connected to network!")
-print("RSSI: %ddB" % fona.rssi)
+print(f"RSSI: {fona.rssi}dB")
 
 # Text a number
 print("Sending SMS...")
@@ -37,7 +37,7 @@ print("SMS Sent!")
 
 # Ask the FONA how many SMS message it has stored
 num_sms = fona.num_sms()
-print("%d SMS's on SIM Card" % num_sms)
+print(f"{num_sms} SMS's on SIM Card")
 
 # FONA3G SMS memory slots start at 0
 if fona.version in {FONA_3G_A, FONA_3G_E}:
